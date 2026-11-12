@@ -1,1 +1,1 @@
-created_at_ist,run_id,model,model_version,code_commit,asof_date,horizon_days,sid,symbol,score,rank_pct,prob_up
+created_at_ist,run_id,asof_date,model,model_version,code_commit,sid,symbol,score,rank_pct,p_beat_1d,p_beat_5d,p_beat_20d

@@ -30,6 +30,7 @@ ALIGN_TOLERANCE = 0.25      # a factor must fit the open this well to be moved t
 NON_EQUITY_SYMBOL = r"-RE\d*$"                       # rights entitlements trade under <SYMBOL>-RE
 FUND_NAME = r"\bETF\b|BEES|MUTUAL FUND|\bMF\b|EXCHANGE TRADED"
 REFERENCE = config.RAW / "reference"
+BENCHMARK_SYMBOLS = ("NIFTYBEES",)  # investable Nifty 50 buy-and-hold; kept out of the universe
 
 
 def research_dates(end: date | None = None) -> list[date]:
@@ -76,7 +77,8 @@ def _cat(parts: list[dict], key: str) -> pd.DataFrame:
 
 def load_symbol_changes(before: date) -> pd.DataFrame:
     """NSE's symbol-change list, cut at `before` so later renames are invisible."""
-    p = REFERENCE / "symbolchange.csv"
+    prod = config.PROD_DIR / "reference" / "symbolchange.csv"
+    p = prod if (config.is_production() and prod.exists()) else REFERENCE / "symbolchange.csv"
     df = pd.read_csv(p, encoding="latin-1", header=0, names=["name", "old", "new", "eff"],
                      dtype=str, usecols=[0, 1, 2, 3])
     df = df.apply(lambda s: s.str.strip())
@@ -144,8 +146,10 @@ def assign_sid(px: pd.DataFrame, changes: pd.DataFrame) -> tuple[pd.Series, dict
 def load_register(before: date) -> pd.DataFrame:
     """NSE corporate-actions register (api.py), cut at `before`."""
     rows = []
-    for f in sorted(CA_DIR.glob("ca_*.json")):
-        rows += json.loads(f.read_text())
+    dirs = [CA_DIR] + ([config.PROD_DIR / "ca_api"] if config.is_production() else [])
+    for d in dirs:
+        for f in sorted(d.glob("ca_*.json")):
+            rows += json.loads(f.read_text())
     df = pd.DataFrame(rows)
     df = df[df.series.isin(parse.EQUITY_SERIES)].copy()
     df["ex_date"] = pd.to_datetime(df.exDate, format="%d-%b-%Y", errors="coerce").astype("datetime64[ns]")
@@ -313,8 +317,24 @@ def quality_flags(px: pd.DataFrame) -> pd.DataFrame:
 
 # -------------------------------------------------------------------- driver
 
-def build(end: date | None = None, workers: int = 6) -> dict:
+def _live_fetch_times() -> dict[pd.Timestamp, pd.Timestamp]:
+    """Real fetch time of each forward-period price file, from the download manifest."""
+    mp = config.RAW / "manifest.csv"
+    if not mp.exists():
+        return {}
+    m = pd.read_csv(mp)
+    m = m[(m.source == "pr") & (m.status == "ok")]
+    m["date"] = pd.to_datetime(m.date)
+    m = m[m.date > pd.Timestamp(config.HOLDOUT_END)]
+    t = pd.to_datetime(m.fetched_at_utc, utc=True).dt.tz_convert(config.IST)
+    return dict(zip(m.date, t))
+
+
+def build(end: date | None = None, workers: int = 6, out_dir=None) -> dict:
+    """Research build by default (ends before the holdout, writes data/clean).
+    Under NSR_PRODUCTION=1 it may run through today and writes to PROD_DIR/clean."""
     end = end or (config.HOLDOUT_START - timedelta(days=1))
+    out_dir = out_dir or config.clean_dir()
     dates = research_dates(end)
     with ProcessPoolExecutor(workers) as ex:
         parts = list(ex.map(load_day, dates, chunksize=40))
@@ -328,7 +348,9 @@ def build(end: date | None = None, workers: int = 6) -> dict:
     # anything named like a fund, and rights-entitlement tickers
     funds = set(px.loc[px.is_etf, "symbol"]) | set(px.loc[px.name.str.upper().str.contains(FUND_NAME, regex=True), "symbol"])
     n_all = len(px)
+    funds -= set(BENCHMARK_SYMBOLS)
     px = px[~px.symbol.isin(funds) & ~px.symbol.str.contains(NON_EQUITY_SYMBOL, regex=True)].drop(columns="is_etf")
+    px["is_benchmark"] = px.symbol.isin(BENCHMARK_SYMBOLS)
     dropped_non_equity = n_all - len(px)
     for key, cols in (("bh", ["band_hit"]), ("mto", ["mto_qty", "deliv_qty"]),
                       ("mcap", ["face_value", "shares_out", "mcap"])):
@@ -349,21 +371,22 @@ def build(end: date | None = None, workers: int = 6) -> dict:
 
     avail = pd.to_datetime(px.date).dt.tz_localize(config.IST) + pd.Timedelta(
         hours=config.ASSUMED_EOD_PUBLISH.hour, minutes=config.ASSUMED_EOD_PUBLISH.minute)
-    px["available_at"] = avail
-    px["available_at_assumed"] = True
+    live = px.date.map(_live_fetch_times())
+    px["available_at_assumed"] = live.isna()
+    px["available_at"] = live.fillna(avail)
 
     ix = _cat(parts, "ix")
     ix["available_at"] = pd.to_datetime(ix.date).dt.tz_localize(config.IST) + pd.Timedelta(hours=20)
     # known to the public from the first daily file that printed it; if it never was
     # printed, we only claim it was known on the ex-date itself
     ca["available_at"] = ca.first_file.fillna(ca.ex_date).dt.tz_localize(config.IST) + pd.Timedelta(hours=20)
-    uni = build_universe(px)
+    uni = build_universe(px[~px.is_benchmark])
 
-    config.CLEAN.mkdir(parents=True, exist_ok=True)
-    px.to_parquet(config.CLEAN / "prices.parquet", index=False)
-    ix.to_parquet(config.CLEAN / "indices.parquet", index=False)
-    ca.drop(columns=["rights"]).to_parquet(config.CLEAN / "corp_actions.parquet", index=False)
-    uni.to_parquet(config.CLEAN / "universe.parquet", index=False)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    px.to_parquet(out_dir / "prices.parquet", index=False)
+    ix.to_parquet(out_dir / "indices.parquet", index=False)
+    ca.drop(columns=["rights"]).to_parquet(out_dir / "corp_actions.parquet", index=False)
+    uni.to_parquet(out_dir / "universe.parquet", index=False)
 
     n = len(px)
     priced = ca[ca.confirmed & ca.kinds.str.contains("split|bonus|rights|consolidation|unresolved|dividend")]
@@ -394,7 +417,7 @@ def build(end: date | None = None, workers: int = 6) -> dict:
         "rows_locked_limit": int(px.locked_limit.sum()),
         "universe_rebalances": int(uni.rebalance_date.nunique()),
     }
-    (config.CLEAN / "build_report.json").write_text(json.dumps(report, indent=2))
+    (out_dir / "build_report.json").write_text(json.dumps(report, indent=2))
     return report
 
 

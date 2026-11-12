@@ -61,16 +61,17 @@ def corporate_actions(s: requests.Session, start: date, end: date, retries: int 
     raise RuntimeError(f"corporate actions API failed for {start}..{end}")
 
 
-def fetch_history(start: date, end: date, out_dir: Path = CA_DIR) -> dict[str, int]:
-    """One JSON file per calendar quarter; existing complete quarters are skipped."""
+def fetch_history(start: date, end: date, out_dir: Path = CA_DIR, refresh: bool = False) -> dict[str, int]:
+    """One JSON file per (possibly partial) calendar quarter. With refresh=True the
+    files are re-fetched and overwritten, which the daily run uses for open quarters."""
     out_dir.mkdir(parents=True, exist_ok=True)
     s, counts = session(), {}
     q = date(start.year, 3 * ((start.month - 1) // 3) + 1, 1)
     while q <= end:
         nxt = date(q.year + (q.month + 3 > 12), (q.month + 3 - 1) % 12 + 1, 1)
         lo, hi = max(q, start), min(nxt - timedelta(days=1), end)
-        f = out_dir / f"ca_{lo:%Y%m%d}_{hi:%Y%m%d}.json"
-        if not f.exists():
+        f = out_dir / (f"ca_{q.year}Q{(q.month - 1) // 3 + 1}.json" if refresh else f"ca_{lo:%Y%m%d}_{hi:%Y%m%d}.json")
+        if refresh or not f.exists():
             rows = corporate_actions(s, lo, hi)
             f.write_text(json.dumps(rows))
             time.sleep(0.7)

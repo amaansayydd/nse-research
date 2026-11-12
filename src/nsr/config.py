@@ -23,6 +23,10 @@ RAW = DATA / "raw"
 CLEAN = DATA / "clean"
 
 HOLDOUT_DIR = Path(os.environ.get("NSR_HOLDOUT_DIR", str(Path.home() / "nse_holdout_LOCKED")))
+# The production panel contains holdout-window rows, so it also lives outside the project.
+PROD_DIR = Path(os.environ.get("NSR_PROD_DIR", str(Path.home() / "nse_production")))
+PREDICTIONS = PROJECT / "predictions.csv"
+SCORES = PROJECT / "scores.csv"
 
 HISTORY_START = date(2010, 1, 1)
 HOLDOUT_START = date(2025, 11, 12)
@@ -62,6 +66,16 @@ def assert_readable(d: date) -> None:
 def raw_root(d: date) -> Path:
     """Holdout-dated raw files are stored outside the project."""
     return (HOLDOUT_DIR / "raw") if in_holdout(d) else RAW
+
+
+def clean_dir() -> Path:
+    """Research code sees data/clean (ends before the holdout). Production sees its own panel."""
+    return (PROD_DIR / "clean") if is_production() else CLEAN
+
+
+def assert_production(what: str) -> None:
+    if not is_production():
+        raise HoldoutViolation(f"{what} is production-only: it contains holdout-window data")
 
 
 def assumed_available_at(d: date) -> datetime:

@@ -10,3 +10,4 @@ data/raw/**
 data/clean/**
 !data/clean/.gitkeep
 !data/clean/build_report.json
+rehearsal/*.csv

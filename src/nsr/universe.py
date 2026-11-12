@@ -5,7 +5,10 @@ At each month-end trading day t, using only rows dated <= t:
   - it traded on at least MIN_DAYS of the last LOOKBACK sessions
   - rank by median daily traded value over those sessions; keep the top N
 
-Membership decided on t applies from the next session until the next rebalance.
+Which membership applies to a prediction made on day D: the latest rebalance in
+a calendar month strictly before D's month (`members_asof`). The code cannot know
+that today is the last session of a month until the next month starts, so this is
+the only rule that gives the same answer live and in replay.
 Because it is rebuilt from daily files that include every stock that traded at
 the time, later-delisted names are members while they were liquid.
 """
@@ -41,13 +44,22 @@ def build_universe(px: pd.DataFrame, top_n: int = TOP_N, lookback: int = LOOKBAC
         recent_eq = is_eq.iloc[max(0, i - 4): i + 1].ffill().iloc[-1] == 1.0
         ok = (traded >= min_days) & recent_eq
         top = med[ok].sort_values(ascending=False).head(top_n)
-        eff = days[i + 1] if i + 1 < len(days) else pd.NaT
         sym_t = px[(px.date <= t) & px.sid.isin(top.index)].sort_values("date").groupby("sid").symbol.last()
         out.append(pd.DataFrame({
-            "rebalance_date": pd.Timestamp(t), "effective_from": eff, "sid": top.index.astype("int32"),
+            "rebalance_date": pd.Timestamp(t), "sid": top.index.astype("int32"),
             "symbol": sym_t.reindex(top.index).to_numpy(),
             "rank": np.arange(1, len(top) + 1), "median_value": top.to_numpy(),
         }))
     uni = pd.concat(out, ignore_index=True)
     uni["available_at"] = uni.rebalance_date.dt.tz_localize(config.IST) + pd.Timedelta(hours=20)
     return uni
+
+
+def members_asof(uni: pd.DataFrame, asof: pd.Timestamp) -> pd.DataFrame:
+    """Universe rows that apply to a prediction made on `asof` (see module docstring)."""
+    asof = pd.Timestamp(asof)
+    rb = uni.rebalance_date
+    done = rb[(rb.dt.year * 12 + rb.dt.month) < (asof.year * 12 + asof.month)]
+    if done.empty:
+        return uni.iloc[0:0]
+    return uni[rb == done.max()]
