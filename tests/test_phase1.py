@@ -162,3 +162,43 @@ def test_sim_pessimistic_bound_writes_off_a_stock_that_stops_trading():
     gone = simulate(panel, picks, 0, 29, h=1, n_names=2, writeoff_after=10)
     assert gone.stats["writeoffs"] == 1
     assert gone.equity.iloc[-1] < 0.51 * kept.equity.iloc[-1] + 1
+
+
+def test_run_log_raises_an_alert_after_three_failures_and_clears_it(tmp_path, monkeypatch):
+    from nsr import daily
+    log = tmp_path / "run_log.md"
+    log.write_text("# Run log\n\n| run at (IST) | outcome | data date | predictions written | notes |\n|---|---|---|---|---|\n")
+    monkeypatch.setattr(daily, "RUN_LOG", log)
+    monkeypatch.setattr(daily.subprocess, "run", lambda *a, **k: None)   # no desktop notification in tests
+    t = datetime(2026, 11, 12, 20, 30, tzinfo=config.IST)
+    daily.log_run(t, "OK", "2026-11-12", 1500, "")
+    daily.log_run(t, "FAIL", "-", 0, "boom | with a pipe")
+    daily.log_run(t, "FAIL", "-", 0, "boom")
+    assert "ALERT" not in log.read_text()
+    daily.log_run(t, "FAIL", "-", 0, "boom")
+    text = log.read_text()
+    assert "ALERT: the last 3 runs failed" in text and text.count("| FAIL |") == 3
+    assert "boom / with a pipe" in text                       # pipes cannot break the table
+    daily.log_run(t, "OK", "2026-11-13", 1500, "")
+    assert "ALERT" not in log.read_text() and log.read_text().count("| 2026-11-12 20:30 |") == 5
+
+
+def test_production_panel_is_refused_outside_production(monkeypatch):
+    monkeypatch.delenv(config.PRODUCTION_ENV, raising=False)
+    with pytest.raises(config.HoldoutViolation):
+        Panel.load(config.PROD_DIR / "clean")
+    from nsr import api
+    with pytest.raises(config.HoldoutViolation):
+        api.refresh_production_register(config.HOLDOUT_END)
+    with pytest.raises(config.HoldoutViolation):
+        api._guard_window(config.HOLDOUT_START, config.HOLDOUT_END)
+
+
+def test_random_control_depends_only_on_date_and_ticker():
+    panel, px, uni = make_panel(n_days=60, n_stocks=10)
+    renumbered = px.assign(sid=px.sid.map(lambda x: 100 - x))        # same tickers, different ids and order
+    other = Panel.from_frames(renumbered, uni.assign(sid=100 - uni.sid))
+    a = dict(zip(panel.view(40).keys, models.random(panel.view(40))))
+    b = dict(zip(other.view(40).keys, models.random(other.view(40))))
+    assert a == b and len(set(a.values())) == 10
+    assert dict(zip(panel.view(41).keys, models.random(panel.view(41)))) != a   # new draw each day

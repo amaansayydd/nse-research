@@ -80,6 +80,29 @@ def fetch_history(start: date, end: date, out_dir: Path = CA_DIR, refresh: bool 
     return counts
 
 
+def refresh_production_register(today: date) -> dict[str, int]:
+    """Register for holdout start .. today+45d, kept outside the project. Closed
+    quarters are fetched once; quarters still in play are re-fetched every run."""
+    config.assert_production("the production corporate-actions register")
+    out = config.PROD_DIR / "ca_api"
+    out.mkdir(parents=True, exist_ok=True)
+    s, counts = None, {}
+    end = today + timedelta(days=45)
+    q = date(config.HOLDOUT_START.year, 3 * ((config.HOLDOUT_START.month - 1) // 3) + 1, 1)
+    while q <= end:
+        nxt = date(q.year + (q.month + 3 > 12), (q.month + 3 - 1) % 12 + 1, 1)
+        lo, hi = max(q, config.HOLDOUT_START), min(nxt - timedelta(days=1), end)
+        f = out / f"ca_{q.year}Q{(q.month - 1) // 3 + 1}.json"
+        still_open = hi >= today - timedelta(days=35)
+        if still_open or not f.exists():
+            s = s or session()
+            f.write_text(json.dumps(corporate_actions(s, lo, hi)))
+            time.sleep(0.7)
+        counts[f.name] = len(json.loads(f.read_text()))
+        q = nxt
+    return counts
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--start", type=date.fromisoformat, default=config.HISTORY_START)

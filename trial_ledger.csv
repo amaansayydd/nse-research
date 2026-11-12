@@ -1,1 +1,4 @@
 trial_id,date_registered,kind,hypothesis,design_ref,status,result_summary,net_sharpe,ic_mean,ic_tstat,n_obs,notes
+B-001,2026-11-12,baseline,"random scores (control: must show zero skill)",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
+B-002,2026-11-12,baseline,"12-1 momentum, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
+B-003,2026-11-12,baseline,"5-day reversal, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"

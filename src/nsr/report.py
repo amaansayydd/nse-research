@@ -31,23 +31,25 @@ def picks_from_preds(panel: Panel, preds: pd.DataFrame, model: str) -> dict[int,
     return out
 
 
-def universe_returns(panel: Panel, start: int, end: int) -> pd.Series:
-    """Equal-weight daily total return of the universe members. Costless, so not investable."""
-    vals = []
-    for s in range(start + 1, end + 1):
-        c = panel.members(s - 1)
-        r = panel.ret_cc[s, c]
-        vals.append(np.nanmean(r) if np.isfinite(r).any() else 0.0)
-    return pd.Series(vals, index=panel.dates[start + 1: end + 1])
+def universe_hold(panel: Panel, start: int, end: int):
+    """The investable hurdle: buy every universe member in equal weight, re-form about
+    monthly, pay the same costs as the models. (A daily-rebalanced, costless equal-weight
+    average overstated this by about 10 points over the two rehearsal years.)"""
+    picks = {i: panel.members(i) for i in range(start, end + 1)}
+    return simulate(panel, picks, start, end, 21, 500, CAPITAL)
 
 
 def run_sims(panel: Panel, preds: pd.DataFrame, start: int, end: int) -> pd.DataFrame:
     rows = []
     if end - start < 2:
         return pd.DataFrame()
-    for name, r in (("universe equal-weight (no costs)", universe_returns(panel, start, end)),
-                    ("NIFTYBEES buy and hold (no costs)", panel.bench.get("NIFTYBEES", pd.Series(dtype=float)).iloc[start + 1: end + 1]),
-                    ("Nifty 50 price index", panel.bench.get("NIFTY50_PRICE", pd.Series(dtype=float)).iloc[start + 1: end + 1])):
+    keep = ("total_return", "cagr", "vol", "max_drawdown", "turnover_per_year", "cost_drag_per_year",
+            "unfilled_buys", "blocked_sells")
+    hurdle = universe_hold(panel, start, end)
+    rows.append({"portfolio": "universe, equal weight, all 500 (after costs)", "hold": "21d",
+                 **{k: hurdle.stats[k] for k in keep}})
+    for name, col in (("NIFTYBEES buy and hold (no trading costs)", "NIFTYBEES"), ("Nifty 50 price index (not investable)", "NIFTY50_PRICE")):
+        r = panel.bench.get(col, pd.Series(dtype=float)).iloc[start + 1: end + 1]
         if len(r):
             rows.append({"portfolio": name, "hold": "-", **performance(buy_and_hold(r, CAPITAL), CAPITAL)})
     for model in MODELS:
@@ -55,8 +57,6 @@ def run_sims(panel: Panel, preds: pd.DataFrame, start: int, end: int) -> pd.Data
         for h in SIM_HORIZONS:
             res = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL)
             worst = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL, writeoff_after=60)
-            keep = ("total_return", "cagr", "vol", "max_drawdown", "turnover_per_year", "cost_drag_per_year",
-                    "unfilled_buys", "blocked_sells")
             rows.append({"portfolio": f"{model} top {N_NAMES}", "hold": f"{h}d",
                          **{k: res.stats[k] for k in keep},
                          "total_return_if_silent_holdings_go_to_zero": worst.stats["total_return"],
@@ -117,6 +117,7 @@ Top {N_NAMES} names, Rs {CAPITAL:,.0f} paper capital, trades at the next open wi
 full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax.
 
 {sim_table(sims)}
-`random` is the control: any model that cannot beat it has shown nothing.
+`random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
+model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
 """
     path.write_text(text)

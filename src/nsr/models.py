@@ -38,9 +38,15 @@ def rev_5(v: View) -> np.ndarray:
 
 
 def random(v: View) -> np.ndarray:
-    """Pure noise, reproducible per date. Its measured skill must be zero; if it is not, the scorer leaks."""
-    seed = int(hashlib.sha256(f"random|{VERSION}|{v.asof.date()}".encode()).hexdigest()[:16], 16)
-    return np.random.default_rng(seed).standard_normal(v.ret_cc.shape[1])
+    """Pure noise. Each score is a hash of (version, date, ticker), so anyone can
+    reproduce it from the log alone and it does not depend on how a build numbers
+    securities. Its measured skill must be zero; if it is not, the scorer leaks."""
+    day = v.asof.date()
+    out = np.full(len(v.keys), np.nan)
+    for c, k in enumerate(v.keys):
+        if k:
+            out[c] = int(hashlib.sha256(f"random|{VERSION}|{day}|{k}".encode()).hexdigest()[:13], 16) / 16 ** 13
+    return out
 
 
 MODELS = {"random": random, "mom_12_1": mom_12_1, "rev_5": rev_5}

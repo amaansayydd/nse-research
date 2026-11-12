@@ -1,0 +1,16 @@
+{
+  "passed": true,
+  "checks": {
+    "every session has predictions from every model": true,
+    "about 500 names ranked per model per day": true,
+    "no duplicate (date, model, symbol) rows": true,
+    "every matured target was scored, none early": true,
+    "scores never used a session after the run date": true,
+    "log refuses a second write for the same day": true,
+    "predictions unchanged when the future is overwritten": true,
+    "random model shows no skill (|t| < 3 at every horizon)": true,
+    "random model Brier is 0.25": true,
+    "rebuild from raw as of day D reproduces the logged predictions": true
+  },
+  "sessions": 496
+}

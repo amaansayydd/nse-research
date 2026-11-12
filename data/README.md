@@ -1,7 +1,7 @@
 # Data: sources, timing rules and known flaws
 
-Built 2026-11-12. Research window 2010-01-04 .. 2025-11-11: 3,937 trading days, 6,259,555 price
-rows, 2,945 securities. Numbers below come from `data/clean/build_report.json`; rerun
+Built 2026-11-12. Research window 2010-01-04 .. 2025-11-11: 3,935 trading days, 6,263,490 price
+rows, 2,946 securities (including the NIFTYBEES benchmark). Numbers below come from `data/clean/build_report.json`; rerun
 `python -m nsr.build` to refresh them.
 
 ## Date regimes
@@ -11,6 +11,10 @@ rows, 2,945 securities. Numbers below come from `data/clean/build_report.json`; 
 | Research | 2010-01-04 .. 2025-11-11 | `data/raw`, `data/clean` | everything |
 | Locked holdout | 2025-11-12 .. 2026-11-11 (248 sessions) | `~/nse_holdout_LOCKED/raw` | scheduled production run only, for live features |
 | Forward | 2026-11-12 onward | `data/raw` (collected by the daily run) | everything |
+
+The production panel (`~/nse_production/clean`) is rebuilt by every daily run from all three regimes.
+Because it contains holdout-window rows it lives outside the project, and `Panel.load` refuses to
+open it unless the caller is the production run.
 
 Holdout files were written to disk without being opened. Only size and SHA-256 were recorded
 (`~/nse_holdout_LOCKED/raw/manifest.csv`).
@@ -114,8 +118,9 @@ Each one says what goes wrong and how the build handles it.
 
 - **F14. No delisting returns.** When a stock stops trading, its last return is its last trade.
   Nothing is applied for a suspension that ends at zero, or for a merger payout. 277 of the 1,428
-  securities that were ever in the universe no longer trade. This flatters strategies that hold
-  names into suspension. The simulator needs an explicit rule (Phase 1).
+  securities that were ever in the universe no longer trade. The simulator reports two bounds: the
+  holding stays at its last price (headline), or it is written to zero after 60 silent sessions.
+  The truth for a merger is between the two; for a bankruptcy it is the second.
 - **F15. Renames.** 350 renames are linked. 236 could not be (216 predate 2010; the rest lack data
   on one side) and 9 were rejected because the price did not carry over. 11 pairs where both
   tickers exist stay unlinked: such a stock looks like a delisting followed by a new listing, so its
@@ -137,8 +142,14 @@ Each one says what goes wrong and how the build handles it.
 - **F21. Delivery quantity is missing for 6–11% of rows**, all in trade-for-trade series (BE, BZ),
   where delivery is 100% by rule.
 - **F22. Index data is price-only.** Names change over time (S&P CNX Nifty, CNX Nifty, Nifty 50).
-  Total-return indices are not automated yet, so benchmarks understate by roughly the dividend yield
-  until that is fixed (Phase 1 blocker for the scoreboard).
+  The official total-return index endpoint refuses automated requests. The buy-and-hold benchmark
+  is therefore the NIFTYBEES ETF (12.0% a year over 2010–2025 against 11.0% for the price index),
+  which holds its dividends and is net of fund costs. There is no investable Nifty 500 benchmark.
+- **F27. A costless daily-rebalanced equal-weight average is not a fair benchmark.** Over the two
+  rehearsal years it returned 44.6% against 33.1% for the same universe bought, held about a month
+  and charged costs. The scoreboard uses the second.
+- **F28. Three sessions have a bundle but no usable equity rows**: Sundays 2010-05-16 and 2012-11-11
+  (mock sessions with near-empty files) and the misfiled 2024-04-06. They are not trading days here.
 - **F23. `locked_limit` is a proxy.** The band-hit file says a stock touched its band, not the band
   size or how long it stayed there. `locked_limit` = band hit and high equals low, which misses
   stocks that locked after trading a range. 0.22% of universe rows are locked by this definition.
@@ -146,6 +157,13 @@ Each one says what goes wrong and how the build handles it.
   sessions (22 in the research window) have thin volume and are not flagged.
 - **F25. 25 moves beyond ±40% are kept as real** (Yes Bank, DHFL, Jet Airways, Infibeam and
   similar). The recent ones were checked by eye; older ones were not verified one by one.
+
+- **F29. The corporate-actions register is a snapshot with today's tickers.** It files some old
+  actions under a company's later name (Ami Organics' Sept 2024 dividend sits under ACUTAAS). The
+  build translates those labels with the rename list. The rehearsal caught this: a rebuild "as of"
+  Nov 2024 missed that dividend until the label translation was allowed to use later renames.
+  Renames dated inside the locked holdout are still not used by research builds, so an action whose
+  company was renamed during the holdout year can be missing if the daily file also lacks it.
 
 ### Settlement
 

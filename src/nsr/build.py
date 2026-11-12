@@ -59,7 +59,7 @@ def _load_day(d: date) -> dict[str, pd.DataFrame]:
     if zf is not None:
         eq, ix = parse.parse_pd(zf, d)
         out = {"eq": eq, "ix": ix, "bc": parse.parse_bc(zf, d), "bh": parse.parse_bh(zf, d),
-               "mcap": parse.parse_mcap(zf, d), "src": "pr"}
+               "mcap": parse.parse_mcap(zf, d), "src": "pr" if len(eq) else "none"}
     else:
         eq = parse.parse_cm(d)
         out = {"eq": eq, "ix": e, "bc": e, "bh": e, "mcap": e, "src": "cm" if len(eq) else "none"}
@@ -361,7 +361,12 @@ def build(end: date | None = None, workers: int = 6, out_dir=None) -> dict:
             px[cols] = np.nan
 
     changes = load_symbol_changes(before=end + timedelta(days=1))
-    register = remap_register_symbols(load_register(before=end + timedelta(days=1)), changes)
+    # The register is a snapshot taken when it was fetched and uses the tickers of that
+    # moment, so its labels are translated with every rename we are allowed to see, not only
+    # those known by `end`. This moves no price information: an action with ex-date <= end
+    # was public by then. Security identity (assign_sid) still uses renames up to `end` only.
+    label_cut = (end if config.is_production() else max(end, config.HOLDOUT_START - timedelta(days=1))) + timedelta(days=1)
+    register = remap_register_symbols(load_register(before=end + timedelta(days=1)), load_symbol_changes(before=label_cut))
     ca = consolidate_actions(_cat(parts, "bc"), register)
     px = compute_returns(apply_actions(px, ca))
 
@@ -392,7 +397,7 @@ def build(end: date | None = None, workers: int = 6, out_dir=None) -> dict:
     priced = ca[ca.confirmed & ca.kinds.str.contains("split|bonus|rights|consolidation|unresolved|dividend")]
     report = {
         "built_through": end.isoformat(),
-        "trading_days": len(dates), "first_day": dates[0].isoformat(), "last_day": dates[-1].isoformat(),
+        "trading_days": int(px.date.nunique()), "first_day": dates[0].isoformat(), "last_day": dates[-1].isoformat(),
         "price_rows": n, "rows_dropped_funds_and_rights_entitlements": dropped_non_equity,
         "fund_symbols_excluded": len(funds), **id_stats,
         "actions_from_register": int((ca.source == "register").sum()),

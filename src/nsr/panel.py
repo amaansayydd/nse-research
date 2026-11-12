@@ -92,7 +92,10 @@ class Panel:
         return self.symbols.xs(self.dates[i], level="date")
 
     def view(self, i: int) -> "View":
-        return View(self.dates[: i + 1], self.ret_cc[: i + 1], self.ret_id[: i + 1], self.traded[: i + 1])
+        on = self.symbols_on(i)
+        keys = np.full(len(self.sids), "", dtype=object)
+        keys[self.col(on.index.to_numpy())] = on.to_numpy()
+        return View(self.dates[: i + 1], self.ret_cc[: i + 1], self.ret_id[: i + 1], self.traded[: i + 1], keys)
 
     # ------------------------------------------------- realised open-to-open
     @property
@@ -121,6 +124,7 @@ class View:
     ret_cc: np.ndarray
     ret_id: np.ndarray
     traded: np.ndarray
+    keys: np.ndarray        # ticker on the as-of session per column ("" if it did not trade)
 
     @property
     def asof(self) -> pd.Timestamp:

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>com.nse-research.daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/amaansayydd/nsmsn/nse-research/.venv/bin/python</string>
+    <string>-m</string>
+    <string>nsr.daily</string>
+  </array>
+  <key>WorkingDirectory</key><string>/Users/amaansayydd/nsmsn/nse-research</string>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <!-- 20:30 is the main run. 22:30 catches late publication. 07:45 catches a Mac that was asleep,
+       and is still before the 09:00 no-backfill deadline. Runs are idempotent. -->
+  <key>StartCalendarInterval</key>
+  <array>
+    <dict><key>Hour</key><integer>20</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>22</integer><key>Minute</key><integer>30</integer></dict>
+    <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>45</integer></dict>
+  </array>
+  <key>StandardOutPath</key><string>/Users/amaansayydd/nse_production/launchd.log</string>
+  <key>StandardErrorPath</key><string>/Users/amaansayydd/nse_production/launchd.log</string>
+</dict>
+</plist>

@@ -99,13 +99,14 @@ def check_truncated_rebuild(panel: Panel, preds: pd.DataFrame, n_dates: int) -> 
             a = predict.make_predictions(small, len(small.dates) - 1, datetime.now(config.IST), "x", "x")
             b = preds[preds.asof_date == d.strftime("%Y-%m-%d")]
             m = a.merge(b, on=["model", "symbol"], how="outer", suffixes=("_trunc", "_replay"), indicator=True)
-            both = m[m._merge == "both"]
-            results.append({
-                "date": str(d.date()), "rows_truncated_build": len(a), "rows_replay": len(b),
-                "only_in_one": int((m._merge != "both").sum()),
-                "max_abs_score_diff": float((both.score_trunc - both.score_replay).abs().max()),
-                "max_abs_rank_diff": float((both.rank_pct_trunc - both.rank_pct_replay).abs().max()),
-            })
+            for model, mm in m.groupby("model"):
+                both = mm[mm._merge == "both"]
+                results.append({
+                    "date": str(d.date()), "model": model, "rows_truncated_build": int((a.model == model).sum()),
+                    "rows_replay": int((b.model == model).sum()), "only_in_one": int((mm._merge != "both").sum()),
+                    "max_abs_score_diff": float((both.score_trunc - both.score_replay).abs().max()),
+                    "max_abs_rank_diff": float((both.rank_pct_trunc - both.rank_pct_replay).abs().max()),
+                })
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
     return results
