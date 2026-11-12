@@ -1,0 +1,41 @@
+{
+  "built_through": "2025-11-11",
+  "trading_days": 3937,
+  "first_day": "2010-01-04",
+  "last_day": "2025-11-11",
+  "price_rows": 6259555,
+  "rows_dropped_funds_and_rights_entitlements": 327623,
+  "fund_symbols_excluded": 420,
+  "renames_listed": 595,
+  "renames_linked": 350,
+  "renames_no_data": 236,
+  "renames_price_break": 9,
+  "securities": 2945,
+  "actions_from_register": 32222,
+  "actions_only_in_daily_file": 981,
+  "days_from_fallback_source": [
+    "2018-01-02"
+  ],
+  "days_unusable_misfiled_or_empty": [
+    "2024-04-06"
+  ],
+  "days_without_delivery_file": 0,
+  "days_without_band_hit_file": 8,
+  "first_day_with_mcap": "2024-02-01",
+  "actions_total": 33203,
+  "actions_unconfirmed": 261,
+  "actions_price_relevant": 21353,
+  "dividends_parsed": 19660,
+  "dividends_amount_unknown": 75,
+  "splits_bonuses_parsed": 1162,
+  "rights_parsed": 285,
+  "actions_unresolved": 415,
+  "rows_ca_unresolved": 236,
+  "rows_ca_suspect": 34,
+  "rows_prevclose_mismatch": 2067,
+  "rows_jump_suspect": 25,
+  "rows_ret_missing": 5255,
+  "rows_band_hit": 636223,
+  "rows_locked_limit": 96122,
+  "universe_rebalances": 185
+}
