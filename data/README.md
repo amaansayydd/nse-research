@@ -165,6 +165,14 @@ Each one says what goes wrong and how the build handles it.
   Renames dated inside the locked holdout are still not used by research builds, so an action whose
   company was renamed during the holdout year can be missing if the daily file also lacks it.
 
+- **F30. Announcement and board-meeting text is missing for most of 2022.** The `An` and `Bm` files
+  inside the daily bundle are empty or absent from March to November 2022 (announcements: 110
+  sessions with none; board meetings: 203), and on 12-22 sessions a year in 2023-2025. Text-based
+  signals have nothing to work with on those days. A live text signal would need the announcements
+  API as a second source. Parsed tables: `data/clean/research_text/` (1.12 million announcements
+  excluding mutual-fund NAV notices, 122,513 board-meeting notices). Some records have the subject
+  heading spliced into the first word of the body ("UjaasUpdatess Energy"); keyword rules still match.
+
 ### Settlement
 
 - **F26. T+1 settlement (phased in 2022–23) is not modelled.** Paper predictions do not need it.

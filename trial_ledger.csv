@@ -2,3 +2,6 @@ trial_id,date_registered,kind,hypothesis,design_ref,status,result_summary,net_sh
 B-001,2026-11-12,baseline,"random scores (control: must show zero skill)",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
 B-002,2026-11-12,baseline,"12-1 momentum, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
 B-003,2026-11-12,baseline,"5-day reversal, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
+T-0001,2026-11-12,hypothesis,"delivery-backed moves: 60-session correlation of return with delivery share predicts 20-session returns",research_log.md#t-0001,registered,,,,,,"dense; primary h=20; protocol v1"
+T-0002,2026-11-12,hypothesis,"results-day reaction drift: 2-session abnormal return at the results board meeting, carried 60 sessions",research_log.md#t-0002,registered,,,,,,"dense; primary h=20; known effect (PEAD); protocol v1"
+T-0003,2026-11-12,hypothesis,"order-win announcements (text) are followed by 20-session excess returns",research_log.md#t-0003,registered,,,,,,"event; primary h=20; classifier v1; protocol v1"
