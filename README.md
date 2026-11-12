@@ -42,6 +42,10 @@ uv venv --python 3.12 .venv && uv pip install -e '.[dev]'
 .venv/bin/python -m nsr.download              # fetch any missing research/holdout days
 .venv/bin/python -m nsr.build                 # rebuild data/clean (research window only)
 .venv/bin/python -m nsr.rehearsal             # replay the last two research years (pipeline test)
+.venv/bin/python -m nsr.research.text         # parse announcement and board-meeting text (research window)
+.venv/bin/python -m nsr.research.validate     # harness check on noise, momentum and reversal
+.venv/bin/python -m nsr.research.run T-0002   # run a pre-registered trial (must be in trial_ledger.csv)
+.venv/bin/python -m nsr.research.run --verdicts   # apply the pass rules across all trials so far
 .venv/bin/python -m nsr.daily --dry-run       # run the daily cycle without writing anything
 scripts/install_schedule.sh                   # install or reinstall the launchd job
 ```

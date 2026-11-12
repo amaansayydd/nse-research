@@ -43,13 +43,18 @@ TRIALS = {
 }
 
 
+def result_files() -> list:
+    """One file per trial (T-0001.json); diagnostics such as T-0002_posthoc.json are not results."""
+    return sorted(f for f in RESULTS.glob("T-*.json") if f.stem[2:].isdigit())
+
+
 def registered_trials() -> list[str]:
     led = pd.read_csv(LEDGER)
     return [t for t in led.trial_id if str(t).startswith("T-")]
 
 
 def prior_sharpe_var() -> float:
-    srs = [json.loads(f.read_text()).get("portfolio", {}).get("excess_sharpe_daily") for f in RESULTS.glob("T-*.json")]
+    srs = [json.loads(f.read_text()).get("portfolio", {}).get("excess_sharpe_daily") for f in result_files()]
     srs = [s for s in srs if s is not None and np.isfinite(s)]
     return float(np.var(srs, ddof=1)) if len(srs) >= 2 else 0.0
 
@@ -112,7 +117,7 @@ def verdicts() -> pd.DataFrame:
     """Apply the pre-registered pass rules to every result on file. The t threshold and the
     false-discovery test use the number of hypotheses registered to date, so an old pass can
     be withdrawn as the trial count grows."""
-    res = {f.stem: json.loads(f.read_text()) for f in sorted(RESULTS.glob("T-*.json"))}
+    res = {f.stem: json.loads(f.read_text()) for f in result_files()}
     n = len(registered_trials())
     need = stats.required_t(n)
     p = {k: stats.p_one_sided(primary_t(r)) for k, r in res.items()}

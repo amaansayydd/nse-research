@@ -48,6 +48,31 @@ any signal works.
 - A random control must be reproducible from the log alone. Seeding it by array position made it
   change whenever a rebuild renumbered securities; it is now a hash of date and ticker.
 
+## Findings — Phase 2 batch 1 (research-window backtests, 2026-11-12)
+
+Backtests on 2012-2025. They guide what to test next; only the forward record counts as proof.
+
+- **Rank IC is not return.** A score that leans to low-volatility names gets a positive rank IC
+  because volatile stocks have a lower median return, while its top names earn nothing extra. T-0001
+  had IC t 3.3 and lost 6% a year long-only. Always read IC next to the top-decile mean and the
+  long-only portfolio; never promote on IC alone.
+- **The extreme tail is not the decile.** 5-day reversal has a positive IC, but its 20 biggest losers
+  kept falling: 1% behind the universe per 20 sessions before costs, 21% a year behind after costs,
+  with thousands of sells blocked at lower price bands. A top-20 book lives in the tail.
+- **Momentum is the hurdle in India.** 12-1 momentum: IC 0.051 at 20 sessions, top 20 ahead of the
+  universe by 9.5% a year after costs over 2012-2025, positive IC in 12 of 14 years, and nothing at
+  all in the last two. A new signal has to add to momentum, not just exist.
+- **Results-day reactions drift.** The 2-session abnormal return at a results board meeting predicts
+  the next 20 sessions (residual IC 0.027), strongest outside the top 250 names. A placebo date shows
+  nothing. It went flat in 2025.
+- **Routine good news is sold.** Order-win announcements are followed by a 0.7% give-back over 5
+  sessions. By the time text reaches the evening file, the reaction is over. Text is more likely to
+  be useful as a filter, or with intraday timestamps, than as an evening buy signal.
+- **Free text sources have holes.** The bundle's announcement and board-meeting files are empty for
+  most of 2022 and on 12-22 sessions in later years. A live text signal needs a second source.
+- **Scale long simulations by average equity.** Turnover and cost drag divided by starting capital
+  looked several times too large over 14 years.
+
 ## Priors — market (untested here)
 
 - Delivery costs of ~0.22% a round trip before slippage make 1-day holding periods unviable.

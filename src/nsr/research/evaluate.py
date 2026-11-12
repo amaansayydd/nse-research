@@ -137,7 +137,10 @@ def portfolio_test(rd: ResearchData, S: np.ndarray, h: int, n_trials: int, trial
         "universe_cagr": cagr(hurdle), "excess_cagr": cagr(res.equity) - cagr(hurdle),
         "excess_cagr_if_silent_go_to_zero": cagr(worst.equity) - cagr(hurdle),
         "vol": res.stats["vol"], "max_drawdown": res.stats["max_drawdown"],
-        "turnover_per_year": res.stats["turnover_per_year"], "cost_drag_per_year": res.stats["cost_drag_per_year"],
+        # scaled by average equity: over 14 years the simulator's own figures (scaled by starting capital) mislead
+        "turnover_per_year": float(res.stats["traded_notional"] / 2 / res.equity.mean() / years),
+        "cost_drag_per_year": float((res.stats["charges"] + res.stats["slippage"]) / res.equity.mean() / years),
+        "blocked_sells": res.stats["blocked_sells"],
         "unfilled_buys": res.stats["unfilled_buys"], "tracking_error": float(x.std() * np.sqrt(252)),
         "years_beating_universe": int((yr > 0).sum()), "years": int(len(yr)),
         **{f"excess_{k}": v for k, v in stats.sharpe_tests(x.to_numpy(), n_trials, trial_sr_var).items()},

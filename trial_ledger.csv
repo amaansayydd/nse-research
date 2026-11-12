@@ -1,7 +1,7 @@
 trial_id,date_registered,kind,hypothesis,design_ref,status,result_summary,net_sharpe,ic_mean,ic_tstat,n_obs,notes
-B-001,2026-11-12,baseline,"random scores (control: must show zero skill)",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
-B-002,2026-11-12,baseline,"12-1 momentum, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
-B-003,2026-11-12,baseline,"5-day reversal, known effect",research_log.md#phase-1,forward,,,,,,"not a discovery; yardstick only"
-T-0001,2026-11-12,hypothesis,"delivery-backed moves: 60-session correlation of return with delivery share predicts 20-session returns",research_log.md#t-0001,registered,,,,,,"dense; primary h=20; protocol v1"
-T-0002,2026-11-12,hypothesis,"results-day reaction drift: 2-session abnormal return at the results board meeting, carried 60 sessions",research_log.md#t-0002,registered,,,,,,"dense; primary h=20; known effect (PEAD); protocol v1"
-T-0003,2026-11-12,hypothesis,"order-win announcements (text) are followed by 20-session excess returns",research_log.md#t-0003,registered,,,,,,"event; primary h=20; classifier v1; protocol v1"
+B-001,2026-11-12,baseline,random scores (control: must show zero skill),research_log.md#phase-1,forward,,,,,,not a discovery; yardstick only
+B-002,2026-11-12,baseline,"12-1 momentum, known effect",research_log.md#phase-1,forward,,,,,,not a discovery; yardstick only
+B-003,2026-11-12,baseline,"5-day reversal, known effect",research_log.md#phase-1,forward,,,,,,not a discovery; yardstick only
+T-0001,2026-11-12,hypothesis,delivery-backed moves: 60-session correlation of return with delivery share predicts 20-session returns,research_log.md#t-0001,failed,"IC gates passed (t 3.33, residual t 2.06, 12/14 years) but top decile earned nothing and long-only top 20 lagged the universe by 6.1%/yr after costs; low-volatility tilt, not return prediction",-0.70,0.0277,3.33,3415,dense; primary h=20; protocol v1
+T-0002,2026-11-12,hypothesis,"results-day reaction drift: 2-session abnormal return at the results board meeting, carried 60 sessions",research_log.md#t-0002,passed,"all gates passed: residual IC t 5.96, 13/14 years, top 20 beat the universe by 5.3%/yr after costs, DSR 0.86 (N=3); flat to negative in 2025; weak in the top 100",0.53,0.0410,6.84,3235,dense; primary h=20; known effect (PEAD); protocol v1
+T-0003,2026-11-12,hypothesis,order-win announcements (text) are followed by 20-session excess returns,research_log.md#t-0003,failed,"mean 20-session excess -0.23% (clustered t -0.61); significant give-back in the first 5 sessions (-0.67%, t -4.7)",,,-0.61,1690,event; primary h=20; classifier v1; protocol v1
