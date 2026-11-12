@@ -12,8 +12,9 @@ import warnings
 import numpy as np
 import pandas as pd
 
+from .. import ensemble
 from .data import ResearchData
-from .features import roll_corr
+from .features import roll_corr, window_return
 
 
 # ------------------------------------------------------------------ T-0001
@@ -76,6 +77,41 @@ def ear_drift(rd: ResearchData, hold: int = 60, days: int = 2) -> np.ndarray:
             continue
         S[last[k]: last[k] + hold, col[k]] = float((r - mkt[rows]).sum())
     return S
+
+
+# ------------------------------------------------------------------ T-0004
+def combo(rd: ResearchData, shifting: bool = True, w_mom: float = 0.5) -> np.ndarray:
+    """Weighted rank average of 12-1 momentum and the results-day reaction (nsr.ensemble).
+    With `shifting`, the weights on evening t come from each component's 20-session rank ICs
+    whose target window had closed by t, counted from the first session of the data."""
+    p, h = rd.panel, ensemble.WEIGHT_H
+    T = len(p.dates)
+    S = {"mom_12_1": window_return(rd, 252, 21, 0.8), "ear_drift_60": ear_drift(rd)}
+    elig = rd.member & p.traded
+    P = {k: np.vstack([ensemble.rank_pct(v[t], elig[t]) for t in range(T)]) for k, v in S.items()}
+    ic_sum = {k: np.zeros(T) for k in S}
+    ic_n = {k: np.zeros(T, dtype=np.int64) for k in S}
+    if shifting:
+        fwd = rd.fwd.get(h)
+        for s in range(T - 1 - h):
+            r = fwd[s] if fwd is not None else p.realized(s, h)
+            for k in S:
+                ok = np.isfinite(P[k][s]) & np.isfinite(r)
+                if ok.sum() >= 20:
+                    a, b = pd.Series(P[k][s][ok]).rank().to_numpy(), pd.Series(r[ok]).rank().to_numpy()
+                    ic_sum[k][s], ic_n[k][s] = float(np.corrcoef(a, b)[0, 1]), 1
+        ic_sum = {k: np.cumsum(v) for k, v in ic_sum.items()}
+        ic_n = {k: np.cumsum(v) for k, v in ic_n.items()}
+    out = np.full(elig.shape, np.nan)
+    for t in range(T):
+        last = t - 1 - h                    # latest session whose 20-session target is complete on evening t
+        if shifting:
+            w = ensemble.weights({k: ic_sum[k][last] if last >= 0 else 0.0 for k in S},
+                                 {k: ic_n[k][last] if last >= 0 else 0 for k in S})
+        else:
+            w = {"mom_12_1": w_mom, "ear_drift_60": 1.0 - w_mom}
+        out[t] = ensemble.combine({k: P[k][t] for k in S}, w)
+    return out
 
 
 # ------------------------------------------------------------------ T-0003

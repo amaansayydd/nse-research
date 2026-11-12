@@ -263,6 +263,37 @@ Result         : FAIL (tested 2026-11-12, 3 hypotheses registered, required t 3.
                  Not adopted. "Avoid buying for 5 sessions after an order announcement" is a new
                  hypothesis and would need its own registration.
 
+### T-0004  Momentum plus results-reaction ensemble (ens_mom_ear)      registered: 2026-11-12   status: registered
+Mechanism      : No new mechanism. Two known effects whose scores are nearly unrelated (correlation
+                 0.10) are averaged, so their errors partly cancel. It should lift IC per unit of
+                 noise and soften each part's dead stretches (momentum since late 2023, results
+                 drift in 2025).
+Why it survives: Same as its parts.
+Novelty        : Known effects combined. A pass makes it a baseline-grade challenger, not a discovery.
+Data           : As B-002 and T-0002. Nothing new.
+Design         : Each evening every component's score becomes a rank percentile among universe
+                 members that traded that day. A component with fewer than 100 scored names is
+                 absent that day. A missing percentile counts as 0.5. Score = weighted sum.
+                 Weight of component k is proportional to max(0, m_k), with
+                 m_k = (500 x 0.02 + sum of its matured 20-session rank ICs) / (500 + their count);
+                 equal weights if every m_k is zero. Only ICs whose target window has closed by
+                 that evening are used. The backtest counts from the first session of the data; the
+                 live run counts from the first forward prediction, so live weights start equal.
+                 Code: `nsr.ensemble`, shared by the backtest and the daily run. Primary horizon 20.
+                 Protocol v1.
+Variants       : fixed equal weights; fixed 2/3 momentum; fixed 1/3 momentum.
+Pass criteria  : Protocol v1, all gates. Also reported, not a gate: IC and long-only result against
+                 momentum alone.
+Tripwire       : The parts have ICs of 0.051 and 0.041, so the ensemble may exceed the 0.06 "too
+                 good" line. If it does, the audit is: the look-ahead test, the two component
+                 results already on file, and whether the ensemble IC is what two signals with those
+                 ICs and that correlation imply. It stays INVESTIGATE unless all three are clean.
+Falsified if   : IC t below 3, residual IC t below 2, or the top 20 does not beat the universe after
+                 costs.
+Expected life  : As its parts.
+Prior          : About 70% for the IC gates (both parts pass them alone), about 50% for every gate.
+Result         : (not run yet)
+
 ### Harness validation (2026-11-12, before any trial was scored)
 
 `python -m nsr.research.validate` → `research/results/controls.json`.

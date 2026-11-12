@@ -40,6 +40,10 @@ TRIALS = {
     "T-0003": {"kind": "event", "name": "order_win", "primary_h": 20, "fn": signals.order_win_events,
                "variants": {"no cooldown": partial(signals.order_win_events, cooldown=0),
                             "cooldown 20 sessions": partial(signals.order_win_events, cooldown=20)}},
+    "T-0004": {"kind": "dense", "name": "ens_mom_ear", "primary_h": 20, "fn": signals.combo,
+               "variants": {"fixed equal weights": partial(signals.combo, shifting=False),
+                            "fixed 2/3 momentum": partial(signals.combo, shifting=False, w_mom=2 / 3),
+                            "fixed 1/3 momentum": partial(signals.combo, shifting=False, w_mom=1 / 3)}},
 }
 
 
