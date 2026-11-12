@@ -5,11 +5,11 @@
   <key>Label</key><string>com.nse-research.daily</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/amaansayydd/nsmsn/nse-research/.venv/bin/python</string>
+    <string>/Users/amaansayydd/nse-research/.venv/bin/python</string>
     <string>-m</string>
     <string>nsr.daily</string>
   </array>
-  <key>WorkingDirectory</key><string>/Users/amaansayydd/nsmsn/nse-research</string>
+  <key>WorkingDirectory</key><string>/Users/amaansayydd/nse-research</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
