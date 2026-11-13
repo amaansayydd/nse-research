@@ -10,3 +10,4 @@ Missed or failed days are logged and skipped. Predictions are never backfilled.
 | 2026-11-12 20:30 | OK | 2026-11-12 | 1489 |  |
 | 2026-11-12 22:30 | ALREADY_DONE | 2026-11-12 | 0 |  |
 | 2026-11-12 23:10 | ALREADY_DONE | 2026-11-12 | 0 |  |
+| 2026-11-13 07:56 | FAIL | - | 0 | TypeError: ufunc 'isfinite' not supported for the input types, and the inputs could not be safely coerced to any supported types according to the casting rule ''safe'' |
