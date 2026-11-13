@@ -8,8 +8,9 @@ forward record decides.
 
 ## State
 
-Phase 0 (data) and Phase 1 (baselines, scoring, automation) built on 2026-11-12. The forward record
-starts with the first scheduled run after that. See `research_log.md` for the standing rules and
+Phase 0 (data) and Phase 1 (baselines, scoring, automation) built on 2026-11-12; the forward record
+started that evening. Phase 2 (discovery loop) has tested four ideas; two passed. Phase 3 (champion
+and challengers) was built on 2026-11-13: two challengers predict in shadow, the seat is empty. See `research_log.md` for the standing rules and
 frozen definitions, `data/README.md` for sources and every known data flaw, and
 `rehearsal/REPORT.md` for the pipeline test.
 
@@ -22,13 +23,16 @@ frozen definitions, `data/README.md` for sources and every known data flaw, and
 | `src/nsr/parse.py`, `corpactions.py` | Raw file parsers; corporate-action text to adjustment factors |
 | `src/nsr/build.py`, `universe.py` | Cleaned panel with returns, flags, `available_at`; point-in-time universe |
 | `src/nsr/panel.py` | Session-by-security arrays; models only ever get a view that stops at the as-of day |
-| `src/nsr/models.py` | Baselines: `random`, `mom_12_1`, `rev_5` |
+| `src/nsr/models.py` | Baselines `random`, `mom_12_1`, `rev_5`; challenger `ear_drift_60`; roles and the 3-slot limit |
+| `src/nsr/notices.py`, `ensemble.py` | Board-meeting notices from the bundles; rank-average ensemble with forward-only weights |
+| `src/nsr/champion.py`, `monitor.py` | Forward comparison at checkpoints; CUSUM decay monitor |
 | `src/nsr/predict.py` | Builds prediction rows; append-only writer; no-backfill rule |
 | `src/nsr/score.py`, `costs.py`, `sim.py`, `report.py` | IC and calibration, Indian delivery costs, long-only simulator, scoreboard |
 | `src/nsr/daily.py` | The scheduled daily cycle (the only production entry point) |
 | `src/nsr/rehearsal.py` | Two-year replay of the daily cycle, and calibration fitting |
-| `scripts/` | launchd job and installer |
-| `models/baselines_v1.json` | Frozen probability slopes for the baselines |
+| `scripts/` | launchd job, installer, `deploy.sh` (pins the code the job runs) |
+| `models/` | Frozen probability slopes (baselines, challengers) and backtest IC expectations for the decay monitor |
+| `champion.json`, `void_predictions.csv`, `ensemble_weights.csv` | Champion state; rows struck from scoring; ensemble weights used each day |
 | `predictions.csv` | Append-only forecast log |
 | `scores.csv`, `scoreboard.md` | Matured results per day; forward-only summary |
 | `trial_ledger.csv`, `research_log.md` | Every trial; pre-registrations and results |
@@ -46,9 +50,16 @@ uv venv --python 3.12 .venv && uv pip install -e '.[dev]'
 .venv/bin/python -m nsr.research.validate     # harness check on noise, momentum and reversal
 .venv/bin/python -m nsr.research.run T-0002   # run a pre-registered trial (must be in trial_ledger.csv)
 .venv/bin/python -m nsr.research.run --verdicts   # apply the pass rules across all trials so far
-.venv/bin/python -m nsr.daily --dry-run       # run the daily cycle without writing anything
+.venv/bin/python -m nsr.research.phase3_plan  # size the forward test from backtests (planning only)
+.venv/bin/python -m nsr.daily --dry-run       # daily cycle without writing; prints what each model would rank
+scripts/deploy.sh                             # copy the committed code to the pinned copy the job runs
+scripts/deploy.sh <commit>                    # roll the job back to an earlier commit
 scripts/install_schedule.sh                   # install or reinstall the launchd job
 ```
+
+The scheduled job never runs this folder. It runs `~/nse_production/app/current`, a copy of one
+commit with its own Python environment, and writes its records back here. A code change reaches the
+live run only through `git commit` and `scripts/deploy.sh`, which runs the tests on the copy first.
 
 The daily job runs at 20:30, 22:30 and 07:45 IST. Each run is idempotent. A run that finds the latest
 session can no longer be predicted in time logs it as missed and moves on.

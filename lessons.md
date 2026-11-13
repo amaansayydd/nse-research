@@ -73,6 +73,36 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 - **Scale long simulations by average equity.** Turnover and cost drag divided by starting capital
   looked several times too large over 14 years.
 
+## Findings — Phase 3 build (2026-11-13)
+
+- **Combining known effects adds less IC than it seems.** Momentum plus results drift has IC 0.057
+  against 0.051 for momentum alone, is 0.90 correlated with momentum and is just as noisy. Its top-20
+  backtest looks far better than that (16% a year over the universe); the forward record will say
+  which number to believe.
+- **"Is the new model's IC higher?" cannot be answered at 20 sessions.** The paired IC gap between the
+  ensemble and momentum would take about 12 years to reach t = 2.2. The IC of what a challenger adds
+  after the reference is removed needs about 2 years if the backtest holds, 6 to 8 if half survives.
+  Test the increment, not the total.
+- **Decay is quiet.** A signal that died today would take 1.6 years (results drift) to 4 years
+  (momentum) to trip a changepoint alarm. Retirement decisions will always be late.
+- **A parser that returns nothing must shout.** NSE changed the board-meeting file layout on
+  2025-10-13 (one space where there were several). The parser silently read zero notices from then
+  on, which cost the last research month and would have left the live challenger permanently silent.
+  The backtest could not show it, because its scored window ended four days earlier. It was caught by
+  the live count of names ranked. Every parsed source now needs a count check in the run notes.
+- **Check the live count against the backtest count.** 444 names ranked live against 439 on average in
+  the backtest is the quickest proof that live code and backtest code see the same world.
+
+## Family scorecard (sets the prior for the next idea in a family)
+
+| Family | Tried | Passed backtest | In shadow | Survived forward | Note |
+|---|---|---|---|---|---|
+| Price-only known effects (momentum, reversal) | 2 baselines | – | – | too early | Momentum is the hurdle; reversal cannot pay costs |
+| Volume and delivery | 1 (T-0001) | 0 | 0 | – | IC without return: a low-volatility tilt |
+| Results-date price reaction | 1 (T-0002) | 1 | 1 | too early | Strongest outside the top 250; flat in 2025 |
+| Announcement text, evening entry | 1 (T-0003) | 0 | 0 | – | Reaction is over by the evening file; give-back follows |
+| Combinations of known effects | 1 (T-0004) | 1 | 1 | too early | Mostly momentum |
+
 ## Priors — market (untested here)
 
 - Delivery costs of ~0.22% a round trip before slippage make 1-day holding periods unviable.
@@ -84,6 +114,14 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
   shareholding) are less crowded than price-only signals.
 
 ## Process lessons
+
+- **Never let the scheduled job run a folder that is being edited.** On 2026-11-13 the 07:56 run
+  picked up half-written Phase 3 code, wrote 489 rows that had to be voided and logged a failure. The
+  risk had been flagged the evening before and not yet fixed. The job now runs a pinned copy of
+  committed code; a risk that can corrupt the forward record is fixed before the next scheduled run,
+  not at the next phase.
+- **Write predictions first, reports second, and never let a report fail a run.** The same crash
+  came from the scoreboard, after the predictions were safely written.
 
 - State a design conflict before building around it. The 12-month holdout collides with live
   features that need 12 months of history; it was resolved by owner decision (production-only read).

@@ -23,7 +23,7 @@ Holdout files were written to disk without being opened. Only size and SHA-256 w
 
 | Source | URL pattern | From | What we take |
 |---|---|---|---|
-| Daily "PR" bundle | `nsearchives.nseindia.com/archives/equities/bhavcopy/pr/PRddmmyy.zip` | 2010 | `pd` prices for all series plus index levels and Nifty 50 flag; `bc` corporate actions; `bh` price-band hits; `mcap` shares and market cap (from 2024-02-01); `an` announcement text and `bm` board meetings (kept raw, not parsed yet) |
+| Daily "PR" bundle | `nsearchives.nseindia.com/archives/equities/bhavcopy/pr/PRddmmyy.zip` | 2010 | `pd` prices for all series plus index levels and Nifty 50 flag; `bc` corporate actions; `bh` price-band hits; `mcap` shares and market cap (from 2024-02-01); `bm` board-meeting notices (parsed by `nsr.notices`, used by the results-drift challenger) and `an` announcement text (parsed for research only) |
 | Delivery positions | `.../archives/equities/mto/MTO_ddmmyyyy.DAT` | 2010 | deliverable quantity per security |
 | Classic bhavcopy | `.../content/historical/EQUITIES/YYYY/MON/cmDDMONYYYYbhav.csv.zip` | 1994–Jul 2024 | fallback prices for days whose PR bundle is misfiled |
 | Corporate-actions register | `www.nseindia.com/api/corporates-corporateActions` (cookie session) | 2010 | ex-date, action text, face value. 33,512 rows |
@@ -170,8 +170,19 @@ Each one says what goes wrong and how the build handles it.
   sessions with none; board meetings: 203), and on 12-22 sessions a year in 2023-2025. Text-based
   signals have nothing to work with on those days. A live text signal would need the announcements
   API as a second source. Parsed tables: `data/clean/research_text/` (1.12 million announcements
-  excluding mutual-fund NAV notices, 122,513 board-meeting notices). Some records have the subject
+  excluding mutual-fund NAV notices, 125,928 board-meeting notices). Some records have the subject
   heading spliced into the first word of the body ("UjaasUpdatess Energy"); keyword rules still match.
+
+- **F31. NSE changed the text layout on 2025-10-13.** In `An` and `Bm` files the company name used
+  to be padded from the ticker by several spaces; since then there is one space. The parser read no
+  board-meeting notices from that date until it was fixed on 2026-11-13 (`nsr.notices.BM` now accepts
+  both; on every bundle up to 2025-10-10 it returns exactly the old records). No registered result
+  changed: every scored session ends by 2025-10-09, and a notice filed later cannot enter an earlier
+  score (checked by recomputing T-0002's scores with the old and new tables). The announcement parser
+  is **not** fixed: the announcements table is incomplete after 2025-10-10 and must be repaired before
+  any new announcement-text trial. In production the notices come from the last 240 days of bundles,
+  holdout window included, and are stored in `~/nse_production/clean/board_meetings.parquet`. The run
+  notes flag a window with no notices or more than 30 empty sessions.
 
 ### Settlement
 
