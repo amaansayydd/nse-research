@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-12 23:10 IST. Prediction days logged: 1. Days with a matured score: 0.
+Updated 2026-11-13 10:21 IST. Prediction days logged: 1. Days with a matured score: 0.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -14,7 +14,8 @@ yet. `days needed for t=2` assumes the IC measured so far is the true IC, which 
 _no matured predictions yet_
 
 `top_excess_mean`: top-decile mean return minus the universe mean, before costs. `top_hit`: share of
-top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores.
+top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores. `ic_ex_ref_mean`:
+rank IC left after the reference model's ranks are removed.
 
 ## Simulated long-only portfolios after costs
 
@@ -25,3 +26,40 @@ _not enough sessions to simulate yet_
 
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
+
+## Champion and challengers
+
+Champion: **none (seat empty)**. Reference to beat: `mom_12_1`. Challengers ever started: 2.
+A challenger is judged only at 250, 375, 500 ... scored sessions at the 20-session horizon. `ic_beyond_reference`
+is its rank IC after the reference's ranks are removed; its t-stat must reach `required_t`, which rises
+with every challenger ever started. Meeting the rule earns a holdout check by the owner, not a promotion.
+
+| challenger | reference | scored_sessions | judged_on | ic | ic_t | reference_ic | ic_beyond_reference | beyond_t | top_decile_excess | required_t | status |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| ear_drift_60 | mom_12_1 | 0 | 0 |  |  |  |  |  |  | 2.24 | too early: 0 of 250 sessions |
+| ens_mom_ear | mom_12_1 | 0 | 0 |  |  |  |  |  |  | 2.24 | too early: 0 of 250 sessions |
+
+Ensemble weights for the latest prediction: `mom_12_1` 0.500, `ear_drift_60` 0.500. They start equal and move only on matured forward 20-session ICs.
+
+## Decay monitor
+
+One-sided CUSUM on each model's forward rank IC, sampled every h sessions. `expected_ic` is half the
+backtest IC; an alarm means the IC has run below that for long enough to look like a change, and
+gives the estimated start. `sessions_to_detect_total_loss` is how long an edge that vanished today
+would take to raise the alarm: weak signals decay quietly.
+
+| model | horizon | expected_ic | observations | forward_ic | cusum | alarm_at | state | sessions_to_detect_total_loss | retire_rule_met |
+|---|---|---|---|---|---|---|---|---|---|
+| mom_12_1 | 1 | 0.0062 | 0 |  | 0.00 | 43.57 | ok | 1064 |  |
+| mom_12_1 | 5 | 0.0158 | 0 |  | 0.00 | 19.51 | ok | 1175 |  |
+| mom_12_1 | 20 | 0.0256 | 0 |  | 0.00 | 10.22 | ok | 1581 |  |
+| rev_5 | 1 | 0.0114 | 0 |  | 0.00 | 33.22 | ok | 506 |  |
+| rev_5 | 5 | 0.0157 | 0 |  | 0.00 | 17.71 | ok | 898 |  |
+| rev_5 | 20 | 0.0044 | 0 |  | 0.00 | 13.15 | ok | 3420 |  |
+| ear_drift_60 | 1 | 0.0072 | 0 |  | 0.00 | 30.71 | ok | 412 |  |
+| ear_drift_60 | 5 | 0.0135 | 0 |  | 0.00 | 15.25 | ok | 605 |  |
+| ear_drift_60 | 20 | 0.0205 | 0 |  | 0.00 | 8.25 | ok | 891 |  |
+| ens_mom_ear | 1 | 0.0077 | 0 |  | 0.00 | 38.71 | ok | 763 |  |
+| ens_mom_ear | 5 | 0.0179 | 0 |  | 0.00 | 18.07 | ok | 949 |  |
+| ens_mom_ear | 20 | 0.0285 | 0 |  | 0.00 | 9.65 | ok | 1347 |  |
+
