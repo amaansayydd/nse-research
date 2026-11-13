@@ -156,3 +156,46 @@ def events_matrix(rd: ResearchData, ev: pd.DataFrame) -> np.ndarray:
     M = np.zeros(rd.member.shape)
     M[ev.i.to_numpy(), ev.col.to_numpy()] = 1.0
     return M
+
+
+# ------------------------------------------------------------------ T-0005
+INSIDERS = ("Promoters", "Promoter Group", "Director", "Key Managerial Personnel")
+
+
+def insider_buys(rd: ResearchData, min_value: float = 1_000_000.0, cooldown: int = 20,
+                 categories: tuple[str, ...] = INSIDERS, max_lag_days: int | None = 15,
+                 after: str | None = None) -> pd.DataFrame:
+    """Open-market share purchases by insiders, disclosed under SEBI's insider-trading rules.
+    One event per stock per session: the purchases that became usable that evening must total at
+    least `min_value` rupees, each disclosed within `max_lag_days` of the trade. A stock with an
+    event in the previous `cooldown` sessions is skipped. `after` = "fall" or "rise" keeps events
+    where the stock's 60-session return was below or above the universe median that day."""
+    t = rd.tables["insider"]
+    t = t[(t["mode"] == "Market Purchase") & (t.txn == "Buy") & t.category.isin(categories)
+          & t.sec_type.str.lower().str.startswith("equity") & (t.value > 0)]
+    if max_lag_days is not None:
+        lag = (t.broadcast.dt.normalize() - t.trade_to).dt.days
+        t = t[(lag >= 0) & (lag <= max_lag_days)]
+    i = np.searchsorted(rd.dates, t.known.to_numpy(), side="left")       # first session on or after `known`
+    t = t[i < len(rd.dates)].assign(i=i[i < len(rd.dates)])
+    t["col"] = rd.symbol_columns(rd.dates[t.i.to_numpy()], t.symbol)
+    t = t[t.col >= 0]
+    ev = t.groupby(["i", "col"], as_index=False).agg(value=("value", "sum"), persons=("person", "nunique"))
+    ev = ev[ev.value >= min_value]
+    ev = ev[rd.member[ev.i.to_numpy(), ev.col.to_numpy()] & rd.panel.traded[ev.i.to_numpy(), ev.col.to_numpy()]]
+    if after is not None:
+        r60 = window_return(rd, 60, 0, 0.8)
+        own = r60[ev.i.to_numpy(), ev.col.to_numpy()]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", RuntimeWarning)
+            med = np.nanmedian(np.where(rd.member, r60, np.nan), axis=1)[ev.i.to_numpy()]
+        ev = ev[(own < med) if after == "fall" else (own >= med)]
+    ev = ev.sort_values(["col", "i"])
+    if cooldown:
+        keep, last = [], {}
+        for i_, c in zip(ev.i.to_numpy(), ev.col.to_numpy()):
+            keep.append(i_ - last.get(c, -10 ** 9) > cooldown)
+            if keep[-1]:
+                last[c] = i_
+        ev = ev[np.array(keep, dtype=bool)]
+    return ev.sort_values(["i", "col"]).reset_index(drop=True)

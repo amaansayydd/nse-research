@@ -34,9 +34,9 @@ Holdout files were written to disk without being opened. Only size and SHA-256 w
 | Data | Endpoint | Timestamp quality |
 |---|---|---|
 | Announcements | `api/corporate-announcements` | exact (`an_dt`, to the second) |
-| Financial results | `api/corporates-financial-results` | exact (`broadCastDate`) |
-| Shareholding patterns | `api/corporate-share-holdings-master` | exact (`broadcastDate`) |
-| Insider trades (PIT) | `api/corporates-pit` | has broadcast fields |
+| Financial results | `api/corporates-financial-results` | exact (`broadCastDate`), but no numbers: one XBRL file per filing. Its date filter does not work; query by symbol. An unfiltered call returns the latest filings, which are inside the holdout window: never call it unfiltered |
+| Shareholding patterns | `api/corporate-share-holdings-master` | exact (`broadcastDate`); promoter and public percentages are in the list itself. Full coverage only from the March 2022 quarter (about 2,000 filings a quarter; 18 to 49 before that) |
+| Insider trades (PIT) | `api/corporates-pit` | **ingested 2026-11-13** for research (`nsr.research.filings`), 2016 onward, broadcast time to the minute |
 | Bulk and block deals | `api/historicalOR/bulk-block-short-deals` | trade date only |
 | Pledges | `api/corporate-pledgedata` | returned empty for Oct 2025; needs a second look |
 | Trading holidays | `api/holiday-master?type=trading` | current year |
@@ -183,6 +183,17 @@ Each one says what goes wrong and how the build handles it.
   any new announcement-text trial. In production the notices come from the last 240 days of bundles,
   holdout window included, and are stored in `~/nse_production/clean/board_meetings.parquet`. The run
   notes flag a window with no notices or more than 30 empty sessions.
+
+- **F32. Insider-trade disclosures (PIT), ingested 2026-11-13.** 327,803 rows, 2016-01-01 to
+  2025-11-11, raw JSON in `data/raw/pit_api`, table in `data/clean/research_filings/insider.parquet`.
+  Flaws: (a) the API files old records under the company's ticker of today; they are put back on
+  the ticker of the day with the rename list, which lifts the share that maps to a security from
+  91-95% to 97-99% for 2016-2022; (b) renames dated inside the holdout are invisible to research,
+  so those companies' records are lost (mapped share 92% in 2024, 87% in 2025, which also counts SME
+  tickers that are not in the panel); (c) one filing lists many transactions, so rows are keyed by
+  `did`, not `pid`; (d) coverage thins after 2021 as promoter trades moved to system-driven
+  disclosure at the depositories: raw rows fall from 58,542 in 2018 to 16,991 in 2024; pledge
+  releases by promoters of universe stocks fall to 11 in 2025; (e) nothing before 2016.
 
 ### Settlement
 

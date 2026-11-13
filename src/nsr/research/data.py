@@ -21,6 +21,7 @@ HORIZONS = (1, 5, 20)
 FIELDS = ("close", "value", "deliv_qty", "mto_qty")
 EVAL_START = pd.Timestamp("2012-01-02")
 TEXT_DIR = config.CLEAN / "research_text"
+FILINGS_DIR = config.CLEAN / "research_filings"
 
 
 def _assert_research(dates: pd.DatetimeIndex) -> None:
@@ -42,12 +43,13 @@ class ResearchData:
 
     # ------------------------------------------------------------ loading
     @classmethod
-    def load(cls, tables: tuple[str, ...] = ("board_meetings", "announcements")) -> "ResearchData":
+    def load(cls, tables: tuple[str, ...] = ("board_meetings", "announcements", "insider")) -> "ResearchData":
         if config.is_production():
             raise RuntimeError("research code must not run inside the production process")
         panel = Panel.load(config.CLEAN)
         px = pd.read_parquet(config.CLEAN / "prices.parquet", columns=["date", "sid", "is_benchmark", *FIELDS])
-        tabs = {t: pd.read_parquet(TEXT_DIR / f"{t}.parquet") for t in tables if (TEXT_DIR / f"{t}.parquet").exists()}
+        found = {t: next((d / f"{t}.parquet" for d in (TEXT_DIR, FILINGS_DIR) if (d / f"{t}.parquet").exists()), None) for t in tables}
+        tabs = {t: pd.read_parquet(f) for t, f in found.items() if f is not None}
         return cls.from_panel(panel, px, tabs)
 
     @classmethod

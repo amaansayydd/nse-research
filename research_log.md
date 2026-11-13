@@ -462,6 +462,63 @@ Result         : PASS (tested 2026-11-12, 4 hypotheses registered, required t 3.
                  leak found, but a top-20 backtest in small names flatters; expect less forward.
                  Status: Phase 3 shadow slot. Holdout look not spent.
 
+### Batch 2 scoping (2026-11-13)
+
+Three ideas were queued. Only one can be tested honestly today.
+
+- **Insider purchases: testable.** NSE's insider-trading disclosures have exact broadcast times and
+  go back to January 2016 (327,803 rows in the research window). Registered below as T-0005.
+- **Reported earnings surprise: not yet.** The results API lists filings but carries no numbers;
+  profit and sales sit in one XBRL file per filing, roughly 50,000 files for the universe since
+  2016. That is a throttled multi-night download, and the disk has 4 GB free. Not registered.
+- **Shareholding changes: not under protocol v1.** The shareholding API has full coverage only from
+  the March 2022 quarter: 14 quarters, about 3.5 years. Too short for the year-stability gate and
+  for a t of 3. Not registered. It becomes testable only as history accumulates.
+- **Promoter pledge releases** (same disclosures) were considered and not registered: the source has
+  dried up, from about 150 usable events a year in 2017-2020 to 11 in 2025, so a pass could not be
+  run live. A trial is not spent on something that cannot be deployed.
+
+One probe of the results API without a date filter returned filing metadata up to July 2026, inside
+the holdout window. Only the first and last timestamps were printed; nothing was saved or read.
+Later calls were filtered. Recorded here because the holdout rule covers all data, not only prices.
+
+### T-0005  Insider open-market purchases (insider_buys)      registered: 2026-11-13   status: registered
+Mechanism      : Promoters, directors and key managers know their company better than outsiders.
+                 Buying its shares in the market with their own money is a costly signal that they
+                 think it is cheap. Outsiders under-react: the disclosures are scattered filings,
+                 often small, published a median of 2 days after the trade.
+Why it survives: Few people read regulation 7 filings; the stocks involved are mostly mid and small
+                 caps where large funds cannot act in size.
+Novelty        : Known anomaly family (insider purchases; Seyhun 1986, Lakonishok and Lee 2001,
+                 and later work on Indian promoters). India-specific data, not a new idea. A pass
+                 would be a baseline-grade signal, not a discovery.
+Data           : NSE `corporates-pit` API, research window only, 2016-01-01 to 2025-11-11
+                 (`nsr.research.filings`). A disclosure is usable on day D if broadcast by 20:00 on
+                 D, otherwise on the next day; the event belongs to the first session on or after.
+                 Old records are filed under today's ticker and are put back on the ticker in use
+                 at the time (data/README F32).
+Design         : Rows with mode "Market Purchase", type "Buy", equity shares, person category
+                 Promoters, Promoter Group, Director or Key Managerial Personnel, value above zero,
+                 broadcast within 15 days of the last trade date. Summed per stock per session; an
+                 event needs Rs 10 lakh or more. The stock must be a universe member that traded
+                 that session, with no event in the previous 20 sessions. 1,799 events, 2016-2025
+                 (counted before registration; no return was looked at). Event test, primary
+                 horizon 20, entry at the next open. Protocol v1.
+Variants       : at least Rs 1 lakh; at least Rs 1 crore; no cooldown; promoters and promoter group
+                 only; directors and key managers only; any disclosure lag; after a fall (60-session
+                 return below the universe median that day); after a rise.
+Pass criteria  : Protocol v1, event gates: mean 20-session excess over the universe with a
+                 month-clustered t of 3.0 or more; positive in at least 70% of years with 10 or
+                 more events; above one round trip (0.45%), also when entering a session later.
+Falsified if   : The mean excess is at or below the round-trip cost, or t is below 3.
+Expected life  : The effect is long-lived in the literature. The data is not: usable disclosures
+                 fell from about 250 a year (2016-2020) to 58 (2024, 2025), because promoter trades
+                 moved to system-driven disclosure at the depositories. Even a pass would give a
+                 thin live signal.
+Prior          : About 20% to pass every gate. The effect is well documented but small after
+                 costs, and 10 years of 150 to 300 events a year makes t = 3 a high bar.
+Result         : (not run yet)
+
 ### Harness validation (2026-11-12, before any trial was scored)
 
 `python -m nsr.research.validate` → `research/results/controls.json`.

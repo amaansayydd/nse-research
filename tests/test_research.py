@@ -200,3 +200,27 @@ def test_research_data_refuses_production(monkeypatch):
     monkeypatch.setenv(config.PRODUCTION_ENV, "1")
     with pytest.raises(RuntimeError):
         make_rd(T=300, N=20)
+
+
+def test_insider_buys_need_size_freshness_membership_and_cooldown():
+    def row(known, sym, value, cat="Promoters", mode="Market Purchase", lag=2, hour=10):
+        b = pd.Timestamp(known) + pd.Timedelta(hours=hour)
+        return {"broadcast": b, "known": (b + pd.Timedelta(days=int(hour >= 20))).normalize(), "symbol": sym, "person": "P",
+                "category": cat, "mode": mode, "txn": "Buy", "sec_type": "Equity Shares", "value": value,
+                "trade_to": pd.Timestamp(known) - pd.Timedelta(days=lag)}
+    ins = pd.DataFrame([
+        row("2012-06-12", "S3", 600_000), row("2012-06-12", "S3", 600_000),       # two filings add up to Rs 12 lakh
+        row("2012-06-20", "S3", 5_000_000),                                        # inside the 20-session cooldown
+        row("2012-06-12", "S4", 500_000),                                          # too small
+        row("2012-06-12", "S5", 5_000_000, cat="Employees/Designated Employees"),  # not an insider category
+        row("2012-06-12", "S6", 5_000_000, mode="ESOP"),                           # not an open-market purchase
+        row("2012-06-12", "S7", 5_000_000, lag=40),                                # stale disclosure
+        row("2012-06-12", "S125", 5_000_000),                                      # not in the universe
+        row("2012-06-12", "S8", 5_000_000, hour=21),                               # after 20:00: usable next session
+    ])
+    rd = make_rd(tables={"insider": ins})
+    ev = signals.insider_buys(rd)
+    d0 = int(np.searchsorted(rd.dates, pd.Timestamp("2012-06-12")))
+    assert sorted(zip(ev.i, ev.col)) == [(d0, 3), (d0 + 1, 8)]
+    assert len(signals.insider_buys(rd, cooldown=0)) == 3 and len(signals.insider_buys(rd, max_lag_days=None)) == 3
+    assert len(signals.insider_buys(rd.truncated(d0))) == 1                        # the late filing is not known yet

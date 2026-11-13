@@ -44,6 +44,15 @@ TRIALS = {
                "variants": {"fixed equal weights": partial(signals.combo, shifting=False),
                             "fixed 2/3 momentum": partial(signals.combo, shifting=False, w_mom=2 / 3),
                             "fixed 1/3 momentum": partial(signals.combo, shifting=False, w_mom=1 / 3)}},
+    "T-0005": {"kind": "event", "name": "insider_buys", "primary_h": 20, "fn": signals.insider_buys,
+               "variants": {"at least Rs 1 lakh": partial(signals.insider_buys, min_value=1e5),
+                            "at least Rs 1 crore": partial(signals.insider_buys, min_value=1e7),
+                            "no cooldown": partial(signals.insider_buys, cooldown=0),
+                            "promoters and promoter group only": partial(signals.insider_buys, categories=("Promoters", "Promoter Group")),
+                            "directors and key managers only": partial(signals.insider_buys, categories=("Director", "Key Managerial Personnel")),
+                            "any disclosure lag": partial(signals.insider_buys, max_lag_days=None),
+                            "after a fall": partial(signals.insider_buys, after="fall"),
+                            "after a rise": partial(signals.insider_buys, after="rise")}},
 }
 
 
