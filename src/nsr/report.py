@@ -9,7 +9,9 @@ import pandas as pd
 from .models import ALL_MODELS, ROLES
 from .panel import Panel
 from .score import summarize
+from .costs import CostModel
 from .sim import buy_and_hold, performance, simulate
+from .tax import TaxModel, buy_and_hold_after_tax
 
 SIM_HORIZONS = (5, 20)   # 1-session holding is a diagnostic only: it cannot pay delivery costs
 N_NAMES = 20
@@ -31,32 +33,36 @@ def picks_from_preds(panel: Panel, preds: pd.DataFrame, model: str) -> dict[int,
     return out
 
 
-def universe_hold(panel: Panel, start: int, end: int):
+def universe_hold(panel: Panel, start: int, end: int, tax: TaxModel | None = None):
     """The investable hurdle: buy every universe member in equal weight, re-form about
     monthly, pay the same costs as the models. (A daily-rebalanced, costless equal-weight
     average overstated this by about 10 points over the two rehearsal years.)"""
     picks = {i: panel.members(i) for i in range(start, end + 1)}
-    return simulate(panel, picks, start, end, 21, 500, CAPITAL)
+    return simulate(panel, picks, start, end, 21, 500, CAPITAL, tax=tax)
 
 
 def run_sims(panel: Panel, preds: pd.DataFrame, start: int, end: int) -> pd.DataFrame:
     rows = []
     if end - start < 2:
         return pd.DataFrame()
-    keep = ("total_return", "cagr", "vol", "max_drawdown", "turnover_per_year", "cost_drag_per_year",
-            "unfilled_buys", "blocked_sells")
-    hurdle = universe_hold(panel, start, end)
+    keep = ("total_return", "after_tax_total_return", "cagr", "vol", "max_drawdown", "turnover_per_year",
+            "cost_drag_per_year", "unfilled_buys", "blocked_sells")
+    tax = TaxModel()
+    hurdle = universe_hold(panel, start, end, tax)
     rows.append({"portfolio": "universe, equal weight, all 500 (after costs)", "hold": "21d",
                  **{k: hurdle.stats[k] for k in keep}})
     for name, col in (("NIFTYBEES buy and hold (no trading costs)", "NIFTYBEES"), ("Nifty 50 price index (not investable)", "NIFTY50_PRICE")):
         r = panel.bench.get(col, pd.Series(dtype=float)).iloc[start + 1: end + 1]
         if len(r):
-            rows.append({"portfolio": name, "hold": "-", **performance(buy_and_hold(r, CAPITAL), CAPITAL)})
+            row = {"portfolio": name, "hold": "-", **performance(buy_and_hold(r, CAPITAL), CAPITAL)}
+            if col == "NIFTYBEES":
+                row["after_tax_total_return"] = round(buy_and_hold_after_tax(r, CAPITAL, CostModel(), tax) / CAPITAL - 1, 4)
+            rows.append(row)
     logged = set(preds.model.unique())
     for model in (m for m in ALL_MODELS if m in logged):
         picks = picks_from_preds(panel, preds, model)
         for h in SIM_HORIZONS:
-            res = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL)
+            res = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL, tax=tax)
             worst = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL, writeoff_after=60)
             rows.append({"portfolio": f"{model} top {N_NAMES}", "hold": f"{h}d",
                          **{k: res.stats[k] for k in keep},
@@ -90,7 +96,8 @@ def ic_table(scores: pd.DataFrame) -> str:
 def sim_table(sims: pd.DataFrame) -> str:
     if sims.empty:
         return "_not enough sessions to simulate yet_\n"
-    pct = ("total_return", "cagr", "vol", "max_drawdown", "cost_drag_per_year", "total_return_if_silent_holdings_go_to_zero")
+    pct = ("total_return", "after_tax_total_return", "cagr", "vol", "max_drawdown", "cost_drag_per_year",
+           "total_return_if_silent_holdings_go_to_zero")
     return _fmt(sims, pct=pct, dec={"turnover_per_year": 1, "unfilled_buys": 1, "blocked_sells": 1, "writeoffs": 1})
 
 
@@ -135,7 +142,8 @@ would take to raise the alarm: weak signals decay quietly.
 
 def write_scoreboard(path: Path, scores: pd.DataFrame, sims: pd.DataFrame, n_pred_days: int, updated: str,
                      state: dict | None = None, comparison: pd.DataFrame | None = None,
-                     decay: pd.DataFrame | None = None, retire: dict | None = None, weights: dict | None = None) -> None:
+                     decay: pd.DataFrame | None = None, retire: dict | None = None, weights: dict | None = None,
+                     graduation: str = "") -> None:
     text = f"""# Scoreboard (forward-only)
 
 Updated {updated}. Prediction days logged: {n_pred_days}. Days with a matured score: {scores.asof_date.nunique() if len(scores) else 0}.
@@ -157,11 +165,13 @@ rank IC left after the reference model's ranks are removed.
 ## Simulated long-only portfolios after costs
 
 Top {N_NAMES} names, Rs {CAPITAL:,.0f} paper capital, trades at the next open with 10 bps slippage a side,
-full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax.
+full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax, except
+`after_tax_total_return`: capital-gains tax paid each financial year (20% short-term, 12.5% long-term above
+Rs 1.25 lakh, 4% cess) and the book sold at the end. NIFTYBEES is bought once, held and sold the same way.
 
 {sim_table(sims)}
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
 
 """
-    path.write_text(text + challenger_section(state, comparison, weights) + decay_section(decay, retire))
+    path.write_text(text + challenger_section(state, comparison, weights) + decay_section(decay, retire) + graduation)

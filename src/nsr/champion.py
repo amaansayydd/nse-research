@@ -23,7 +23,8 @@ CHECK_EVERY = 125        # decisions are read only at 250, 375, 500 ... scored s
 ALPHA = 0.025            # one-sided, shared across every challenger ever started
 FUTILITY_SESSIONS = 500
 FUTILITY_T = 0.5
-DEFAULT_STATE = {"champion": None, "reference": "mom_12_1", "ever_compared": [], "former_champions": [], "retired": []}
+DEFAULT_STATE = {"champion": None, "champion_since": None, "reference": "mom_12_1", "ever_compared": [],
+                 "former_champions": [], "retired": []}
 
 
 def load_state(path=None) -> dict:

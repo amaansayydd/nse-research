@@ -288,6 +288,16 @@ earliest graduation is about three to three and a half years away if the backtes
 half the backtest edge survives, it is closer to ten. Nothing in the design can shorten that except
 stronger or more independent signals.
 
+### Pipeline check of the tracker (2026-11-13, not evidence)
+
+The tracker was run on the dress rehearsal (the last two research years, which the backtests had
+already seen) as if `ens_mom_ear` held the seat. It met 2 of the 8 measured criteria. Its top 20
+returned 19.3% a year before tax against 15.7% for the universe, but 15.1% after tax against 15.1%
+for NIFTYBEES after tax, with a 29% drawdown against the 25% limit and an IC t of 0.6. Over those
+two years `ear_drift_60`'s top 20 made 40.0% before tax and 30.8% after, against 31.7% for
+NIFTYBEES after tax. The bar is real: on recent in-sample data the best candidates do not clear it.
+Adding the tax bookkeeping left every pre-tax number in the rehearsal unchanged.
+
 ## Trials
 
 ### T-0001  Delivery-backed moves (deliv_ret_corr_60)      registered: 2026-11-12   status: tested

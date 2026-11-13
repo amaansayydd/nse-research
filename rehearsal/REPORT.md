@@ -66,21 +66,21 @@ goes on the scoreboard: the baselines are known effects and this window was not 
 
 ### Simulated portfolios after costs
 
-| portfolio | hold | total_return | cagr | vol | max_drawdown | turnover_per_year | cost_drag_per_year | unfilled_buys | blocked_sells | total_return_if_silent_holdings_go_to_zero | writeoffs |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| universe, equal weight, all 500 (after costs) | 21d | 33.14% | 15.69% | 19.95% | -25.29% | 0.6 | 0.56% | 0.3 | 1128.0 |  |  |
-| NIFTYBEES buy and hold (no trading costs) | - | 35.16% | 16.58% | 11.62% | -15.23% |  |  |  |  |  |  |
-| Nifty 50 price index (not investable) | - | 31.60% | 15.00% | 13.10% | -15.77% |  |  |  |  |  |  |
-| random top 20 | 5d | -6.35% | -3.29% | 19.68% | -32.17% | 51.3 | 23.20% | 0.6 | 54.2 | -7.69% | 0.2 |
-| random top 20 | 20d | 21.34% | 10.35% | 19.45% | -26.97% | 14.3 | 6.40% | 0.1 | 26.0 | 20.73% | 0.1 |
-| mom_12_1 top 20 | 5d | 25.86% | 12.42% | 30.40% | -39.15% | 10.9 | 4.89% | 0.8 | 0.6 | 25.86% | 0.0 |
-| mom_12_1 top 20 | 20d | 18.42% | 8.99% | 30.27% | -40.08% | 5.4 | 2.42% | 0.2 | 0.0 | 18.42% | 0.0 |
-| rev_5 top 20 | 5d | -9.12% | -4.75% | 24.57% | -33.79% | 48.7 | 22.06% | 1.8 | 2.2 | -9.12% | 0.0 |
-| rev_5 top 20 | 20d | 14.18% | 6.98% | 22.12% | -28.38% | 13.3 | 5.99% | 0.6 | 65.5 | 13.09% | 0.2 |
-| ear_drift_60 top 20 | 5d | 50.25% | 23.03% | 22.94% | -28.85% | 9.1 | 4.05% | 1.0 | 0.6 | 50.25% | 0.0 |
-| ear_drift_60 top 20 | 20d | 39.97% | 18.67% | 22.62% | -28.61% | 6.6 | 2.95% | 0.2 | 0.2 | 39.97% | 0.0 |
-| ens_mom_ear top 20 | 5d | 61.62% | 27.69% | 26.19% | -28.93% | 15.2 | 6.75% | 1.0 | 0.8 | 61.62% | 0.0 |
-| ens_mom_ear top 20 | 20d | 41.40% | 19.29% | 25.78% | -29.28% | 8.0 | 3.58% | 0.2 | 0.6 | 41.40% | 0.0 |
+| portfolio | hold | total_return | after_tax_total_return | cagr | vol | max_drawdown | turnover_per_year | cost_drag_per_year | unfilled_buys | blocked_sells | total_return_if_silent_holdings_go_to_zero | writeoffs |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| universe, equal weight, all 500 (after costs) | 21d | 33.14% | 29.41% | 15.69% | 19.95% | -25.29% | 0.6 | 0.56% | 0.3 | 1128.0 |  |  |
+| NIFTYBEES buy and hold (no trading costs) | - | 35.16% | 31.72% | 16.58% | 11.62% | -15.23% |  |  |  |  |  |  |
+| Nifty 50 price index (not investable) | - | 31.60% |  | 15.00% | 13.10% | -15.77% |  |  |  |  |  |  |
+| random top 20 | 5d | -6.35% | -7.80% | -3.29% | 19.68% | -32.17% | 51.3 | 23.20% | 0.6 | 54.2 | -7.69% | 0.2 |
+| random top 20 | 20d | 21.34% | 16.25% | 10.35% | 19.45% | -26.97% | 14.3 | 6.40% | 0.1 | 26.0 | 20.73% | 0.1 |
+| mom_12_1 top 20 | 5d | 25.86% | 20.03% | 12.42% | 30.40% | -39.15% | 10.9 | 4.89% | 0.8 | 0.6 | 25.86% | 0.0 |
+| mom_12_1 top 20 | 20d | 18.42% | 14.29% | 8.99% | 30.27% | -40.08% | 5.4 | 2.42% | 0.2 | 0.0 | 18.42% | 0.0 |
+| rev_5 top 20 | 5d | -9.12% | -10.04% | -4.75% | 24.57% | -33.79% | 48.7 | 22.06% | 1.8 | 2.2 | -9.12% | 0.0 |
+| rev_5 top 20 | 20d | 14.18% | 10.02% | 6.98% | 22.12% | -28.38% | 13.3 | 5.99% | 0.6 | 65.5 | 13.09% | 0.2 |
+| ear_drift_60 top 20 | 5d | 50.25% | 38.32% | 23.03% | 22.94% | -28.85% | 9.1 | 4.05% | 1.0 | 0.6 | 50.25% | 0.0 |
+| ear_drift_60 top 20 | 20d | 39.97% | 30.82% | 18.67% | 22.62% | -28.61% | 6.6 | 2.95% | 0.2 | 0.2 | 39.97% | 0.0 |
+| ens_mom_ear top 20 | 5d | 61.62% | 46.68% | 27.69% | 26.19% | -28.93% | 15.2 | 6.75% | 1.0 | 0.8 | 61.62% | 0.0 |
+| ens_mom_ear top 20 | 20d | 41.40% | 31.78% | 19.29% | 25.78% | -29.28% | 8.0 | 3.58% | 0.2 | 0.6 | 41.40% | 0.0 |
 
 
 ### Challenger comparison as the scoreboard would show it
@@ -121,6 +121,29 @@ would take to raise the alarm: weak signals decay quietly.
 | ens_mom_ear | 1 | 0.0077 | 494 | 0.0049 | 3.19 | 38.71 | ok | 763 |  |
 | ens_mom_ear | 5 | 0.0179 | 98 | 0.0128 | 2.71 | 18.07 | ok | 949 |  |
 | ens_mom_ear | 20 | 0.0285 | 24 | 0.0258 | 1.58 | 9.65 | ok | 1347 |  |
+
+
+
+### Graduation table as the scoreboard would show it if the ensemble held the seat
+
+## Graduation (Phase 4)
+
+Graduation is the point at which real capital may be considered. It needs every criterion below on
+the forward record, and then the owner's explicit decision. Criteria were fixed on 2026-11-13.
+
+Champion `ens_mom_ear`: 2 of 8 measured criteria met.
+
+| criterion | required | forward record | met |
+|---|---|---|---|
+| G1 standing | champion for 250 scored sessions, not decaying | champion, 227 sessions in the seat | no |
+| G2 duration | 500 scored sessions with a 10% market fall in the window, else 750 | 475 sessions; NIFTYBEES worst fall -15.2% | no |
+| G3 IC | 20-session IC at least 0.02, 5-session IC positive | 0.0121 and 0.0137 | no |
+| G4 t-stat | t of the 20-session IC at least 2.0 | 0.60 | no |
+| G5 against Nifty after costs and taxes | at least 3% a year over NIFTYBEES, both after tax | 15.1% against 15.1% (if taxed as business income: 13.1%) | no |
+| G6 against the universe | beats the universe held after costs, before tax | 19.3% against 15.7% | yes |
+| G7 drawdown | no deeper than -25.0%; no deeper than -15% against the universe | -29.3%; -10.8% against the universe | no |
+| G8 record integrity | predicted on 95% of sessions, control clean, nothing voided in 250 sessions | 100.0% of sessions; control clean; no recent void | yes |
+| G9 owner's checks | contract note matched, tax treatment confirmed, broker API and static IP ready | by hand | by hand |
 
 
 

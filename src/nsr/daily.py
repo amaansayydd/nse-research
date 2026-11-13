@@ -25,7 +25,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import requests
 
-from . import api, champion, config, ensemble, monitor, notices, predict, report, score
+from . import api, champion, config, ensemble, graduation, monitor, notices, predict, report, score
 from .build import build
 from .download import HEADERS, daterange, fetch_one, load_manifest, manifest_path, raw_path
 from .models import ALL_MODELS, ENSEMBLES, ROLES
@@ -120,11 +120,13 @@ def forward_scoreboard(panel: Panel, preds: pd.DataFrame, scores: pd.DataFrame, 
             sims = report.run_sims(panel, preds, int(first), len(panel.dates) - 1)
     challengers = [m for m in ALL_MODELS if ROLES[m] == "challenger" and m not in state["retired"]]
     decay = monitor.decay_table(scores)
+    voids = sorted(set(pd.read_csv(predict.VOIDS, dtype=str).asof_date)) if predict.VOIDS.exists() else []
+    grad = graduation.section(panel, preds, scores, state, decay, challengers, voids)
     report.write_scoreboard(SCOREBOARD, scores, sims, preds.asof_date.nunique() if len(preds) else 0,
                             f"{now:%Y-%m-%d %H:%M} IST", state=state,
                             comparison=champion.compare(scores, state, challengers),
                             decay=decay, retire=monitor.retire_flags(scores, decay) if len(decay) else {},
-                            weights=weights)
+                            weights=weights, graduation=grad)
 
 
 def load_notices(panel: Panel, notes: list[str], dry_run: bool = False) -> None:

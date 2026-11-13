@@ -93,6 +93,18 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 - **Check the live count against the backtest count.** 444 names ranked live against 439 on average in
   the backtest is the quickest proof that live code and backtest code see the same world.
 
+## Findings — Phase 4 design (2026-11-13)
+
+- **Tax is not neutral between the book and the benchmark.** A 20-session book pays 20.8% on nearly
+  every gain each year; NIFTYBEES held for two years pays 12.5% once, above an exemption. A signal has
+  to clear that gap before it has beaten "do nothing".
+- **On the last two research years nothing beat the Nifty ETF after tax.** Results drift's top 20
+  made 40% before tax and 31% after; NIFTYBEES made 32% after tax. In sample, and only two years, but
+  it is the right expectation to hold: beating the universe before tax is not beating an index fund
+  after it.
+- **Profit cannot be tested for significance in a useful time.** Graduation therefore puts the
+  statistics on IC and fixed margins on the after-tax result and drawdown.
+
 ## Family scorecard (sets the prior for the next idea in a family)
 
 | Family | Tried | Passed backtest | In shadow | Survived forward | Note |

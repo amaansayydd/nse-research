@@ -10,7 +10,9 @@ forward record decides.
 
 Phase 0 (data) and Phase 1 (baselines, scoring, automation) built on 2026-11-12; the forward record
 started that evening. Phase 2 (discovery loop) has tested four ideas; two passed. Phase 3 (champion
-and challengers) was built on 2026-11-13: two challengers predict in shadow, the seat is empty. See `research_log.md` for the standing rules and
+and challengers) was built on 2026-11-13: two challengers predict in shadow, the seat is empty.
+Phase 4 (graduation criteria, after-tax tracking, live-trading plan) was written the same day, in
+advance: `research_log.md` and `live_trading.md`. No real money is involved. See `research_log.md` for the standing rules and
 frozen definitions, `data/README.md` for sources and every known data flaw, and
 `rehearsal/REPORT.md` for the pipeline test.
 
@@ -26,6 +28,7 @@ frozen definitions, `data/README.md` for sources and every known data flaw, and
 | `src/nsr/models.py` | Baselines `random`, `mom_12_1`, `rev_5`; challenger `ear_drift_60`; roles and the 3-slot limit |
 | `src/nsr/notices.py`, `ensemble.py` | Board-meeting notices from the bundles; rank-average ensemble with forward-only weights |
 | `src/nsr/champion.py`, `monitor.py` | Forward comparison at checkpoints; CUSUM decay monitor |
+| `src/nsr/tax.py`, `graduation.py` | Capital-gains tax on the paper book; graduation criteria tracker |
 | `src/nsr/predict.py` | Builds prediction rows; append-only writer; no-backfill rule |
 | `src/nsr/score.py`, `costs.py`, `sim.py`, `report.py` | IC and calibration, Indian delivery costs, long-only simulator, scoreboard |
 | `src/nsr/daily.py` | The scheduled daily cycle (the only production entry point) |
@@ -37,6 +40,7 @@ frozen definitions, `data/README.md` for sources and every known data flaw, and
 | `scores.csv`, `scoreboard.md` | Matured results per day; forward-only summary |
 | `trial_ledger.csv`, `research_log.md` | Every trial; pre-registrations and results |
 | `signal_registry.md`, `lessons.md`, `changelog.md`, `run_log.md` | Signal status, lessons, champion history, run history |
+| `live_trading.md` | What would change with real money: rules, tax, staged start, kill rules. Nothing in it is switched on |
 
 ## Commands
 

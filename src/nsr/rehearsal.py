@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import champion, config, ensemble, monitor, notices, predict, report, score
+from . import champion, config, ensemble, graduation, monitor, notices, predict, report, score
 from .build import build
 from .models import ALL_MODELS, HORIZONS, ROLES, VERSION
 from .panel import Panel
@@ -221,6 +221,10 @@ def run(n_rebuild_checks: int = 3) -> dict:
                                   champion.compare(scores, {**champion.DEFAULT_STATE, "ever_compared": shadow}, shadow), None),
         "### Decay monitor as the scoreboard would show it", "",
         report.decay_section(monitor.decay_table(scores), {}), "",
+        "### Graduation table as the scoreboard would show it if the ensemble held the seat", "",
+        graduation.section(panel, preds, scores, {**champion.DEFAULT_STATE, "champion": ensemble.NAME,
+                                                  "champion_since": sessions[len(sessions) // 2]},
+                           monitor.decay_table(scores), []) if shadow else "_no challengers_", "",
         "### Sessions on which a challenger was silent", "",
         report._fmt(pd.DataFrame([{"model": m, "silent_sessions": int(per_day[m].reindex(sessions).isna().sum())} for m in shadow])) if shadow else "_none_", "",
         "### Calibration at 5 sessions: predicted vs realised chance of beating the median", "",
