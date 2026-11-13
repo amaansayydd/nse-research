@@ -17,7 +17,10 @@ PY="$PROD/venv/bin/python"
 if [ ! -x "$PY" ]; then
   uv venv --python 3.12 "$PROD/venv"
 fi
-uv pip install -q --python "$PY" -r <(git -C "$PROJ" show "$SHA:scripts/requirements-prod.txt")
+REQ="$(mktemp)"
+git -C "$PROJ" show "${SHA}:scripts/requirements-prod.txt" > "$REQ"
+uv pip install -q --python "$PY" -r "$REQ"
+rm -f "$REQ"
 
 rm -rf "$REL"
 mkdir -p "$REL"
