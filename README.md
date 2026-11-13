@@ -9,7 +9,7 @@ forward record decides.
 ## State
 
 Phase 0 (data) and Phase 1 (baselines, scoring, automation) built on 2026-11-12; the forward record
-started that evening. Phase 2 (discovery loop) has tested four ideas; two passed. Phase 3 (champion
+started that evening. Phase 2 (discovery loop) has tested five ideas; three passed their backtests. Phase 3 (champion
 and challengers) was built on 2026-11-13: two challengers predict in shadow, the seat is empty.
 Phase 4 (graduation criteria, after-tax tracking, live-trading plan) was written the same day, in
 advance: `research_log.md` and `live_trading.md`. No real money is involved. See `research_log.md` for the standing rules and
@@ -51,6 +51,7 @@ uv venv --python 3.12 .venv && uv pip install -e '.[dev]'
 .venv/bin/python -m nsr.build                 # rebuild data/clean (research window only)
 .venv/bin/python -m nsr.rehearsal             # replay the last two research years (pipeline test)
 .venv/bin/python -m nsr.research.text         # parse announcement and board-meeting text (research window)
+.venv/bin/python -m nsr.research.filings      # download insider-trade disclosures (research window) and build the table
 .venv/bin/python -m nsr.research.validate     # harness check on noise, momentum and reversal
 .venv/bin/python -m nsr.research.run T-0002   # run a pre-registered trial (must be in trial_ledger.csv)
 .venv/bin/python -m nsr.research.run --verdicts   # apply the pass rules across all trials so far

@@ -73,6 +73,25 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 - **Scale long simulations by average equity.** Turnover and cost drag divided by starting capital
   looked several times too large over 14 years.
 
+## Findings — Phase 2 batch 2 (research-window backtest, 2026-11-13)
+
+- **Insider purchases are followed by gains, but the backtest result is fragile.** +1.07% over 20
+  sessions per event (t 3.4, all 10 years), unrelated to momentum, volatility or results drift, and
+  absent for insider sales and share grants. Against it: larger purchases do worse, the top 100
+  shows nothing, and half of it is gone if entry is 2 sessions late.
+- **A signal can pass a backtest and still be untestable forward.** At 58 events a year and 13% of
+  noise per event, insider purchases would need about 15 years to confirm. Work out the forward
+  confirmation time before spending a trial, not after.
+- **Check that the data source is still alive before testing an idea.** Insider and pledge
+  disclosures on NSE's API thinned by three quarters after 2021 as promoter trades moved to
+  system-driven disclosure. Pledge releases fell to 11 usable events in 2025; that idea was dropped
+  untested.
+- **Every "current snapshot" API relabels history.** The insider API files old records under
+  today's ticker, like the corporate-actions register did. Mapping rate is the first thing to check
+  on any new filing source.
+- **Free filing data is shallower than it looks.** Results filings carry no numbers without one
+  XBRL file each; shareholding history is complete only from 2022.
+
 ## Findings — Phase 3 build (2026-11-13)
 
 - **Combining known effects adds less IC than it seems.** Momentum plus results drift has IC 0.057
@@ -114,6 +133,7 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 | Results-date price reaction | 1 (T-0002) | 1 | 1 | too early | Strongest outside the top 250; flat in 2025 |
 | Announcement text, evening entry | 1 (T-0003) | 0 | 0 | – | Reaction is over by the evening file; give-back follows |
 | Combinations of known effects | 1 (T-0004) | 1 | 1 | too early | Mostly momentum |
+| Insider and promoter disclosures | 1 (T-0005) | 1 | 0 | – | Passes thinly; too few events now to confirm forward |
 
 ## Priors — market (untested here)
 

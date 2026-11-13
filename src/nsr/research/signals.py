@@ -178,7 +178,10 @@ def insider_buys(rd: ResearchData, min_value: float = 1_000_000.0, cooldown: int
         t = t[(lag >= 0) & (lag <= max_lag_days)]
     i = np.searchsorted(rd.dates, t.known.to_numpy(), side="left")       # first session on or after `known`
     t = t[i < len(rd.dates)].assign(i=i[i < len(rd.dates)])
-    t["col"] = rd.symbol_columns(rd.dates[t.i.to_numpy()], t.symbol)
+    if t.empty:                                                          # nothing disclosed yet (before 2016)
+        return pd.DataFrame({"i": pd.Series(dtype=np.int64), "col": pd.Series(dtype=np.int64),
+                             "value": pd.Series(dtype=float), "persons": pd.Series(dtype=np.int64)})
+    t["col"] = rd.symbol_columns(rd.dates[t.i.to_numpy()], t.symbol.astype(object))
     t = t[t.col >= 0]
     ev = t.groupby(["i", "col"], as_index=False).agg(value=("value", "sum"), persons=("person", "nunique"))
     ev = ev[ev.value >= min_value]

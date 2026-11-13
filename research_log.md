@@ -482,7 +482,7 @@ One probe of the results API without a date filter returned filing metadata up t
 the holdout window. Only the first and last timestamps were printed; nothing was saved or read.
 Later calls were filtered. Recorded here because the holdout rule covers all data, not only prices.
 
-### T-0005  Insider open-market purchases (insider_buys)      registered: 2026-11-13   status: registered
+### T-0005  Insider open-market purchases (insider_buys)      registered: 2026-11-13   status: tested
 Mechanism      : Promoters, directors and key managers know their company better than outsiders.
                  Buying its shares in the market with their own money is a costly signal that they
                  think it is cheap. Outsiders under-react: the disclosures are scattered filings,
@@ -517,7 +517,53 @@ Expected life  : The effect is long-lived in the literature. The data is not: us
                  thin live signal.
 Prior          : About 20% to pass every gate. The effect is well documented but small after
                  costs, and 10 years of 150 to 300 events a year makes t = 3 a high bar.
-Result         : (not run yet)
+Result         : PASS (tested 2026-11-13, 5 hypotheses registered, required t 3.0). Known family:
+                 baseline-grade, not a discovery. The first run stopped inside the look-ahead check
+                 on an empty-table case before anything was scored; the fix changed no definition.
+                 For: 1,795 scored events, mean 20-session excess over the universe +1.07%,
+                 month-clustered t 3.42, positive in all 10 years (weakest: 2020, +0.1%); +0.62%
+                 after one round trip; +0.80% (t 2.9) when entering a session later. Look-ahead test
+                 exact. Event stocks sit at the middle of every known effect (momentum rank 0.50,
+                 volatility 0.51), so it is not momentum or low volatility in disguise.
+                 Against: (1) Bigger purchases do worse, not better: Rs 1 crore or more gives
+                 +0.59%, t 1.4. That contradicts the "costly signal" mechanism. (2) Nothing in the
+                 100 most liquid names (-0.14%); it is all in ranks 251-500 (+1.74%, t 4.3).
+                 (3) It fades in days: entering 2 sessions later leaves +0.51% (t 1.7), 5 sessions
+                 later +0.33%. The result depends on a fill at the very next open in small caps.
+                 (4) The mean leans on a tail: the median event is +0.12%, and without the best 1%
+                 of events the mean is +0.54%, barely above the 0.45% cost. (A random universe
+                 stock on the same days has a median of -1.0%, so the whole distribution is
+                 shifted, not only the tail; winsorised at 1% the mean is +0.97%, t 3.3.)
+                 (5) Only the pooled definition clears t = 3: promoters alone 2.3, directors and
+                 managers alone 2.3, no cooldown 1.7. The margin over the bar is thin (3.42).
+                 (6) Buys after a fall do worse than buys after a rise, against the contrarian
+                 story in the literature. (7) First half of 2020: -1.5%.
+                 Post-hoc attacks (not pre-registered, `research/results/T-0005_posthoc.json`):
+                 insider market sales through the same filters give -0.34% (t -1.4) and share
+                 grants -0.28% (t -0.8), so there is no generic "a filing appeared" effect; 90% of
+                 events have a results-reaction score and its mean rank is 0.48, with the same
+                 excess above and below the middle, so it is not results drift either.
+                 Forward outlook: the per-event noise is about 13%. Reaching t = 2.39 (the bar for a
+                 third challenger) needs about 880 events: 15 years at today's 58 events a year.
+                 It cannot be confirmed forward on its own in a useful time.
+                 Status: candidate. No shadow slot taken; see batch 2 summary. Holdout look not spent.
+
+### Batch 2 summary (2026-11-13)
+
+One hypothesis registered and tested (T-0005, insider purchases): PASS on the pre-registered gates,
+with thin margins and a mechanism the size split argues against. Two queued ideas could not be
+tested honestly with the data available (earnings surprise, shareholding changes) and one was not
+registered because its data has dried up (pledge releases). Trials to date: 5 hypotheses, 3 passes
+(two of them known effects and their combination, one a known family), 2 failures.
+
+T-0005 has not been given a shadow slot. Phase 3 rules v1 judge dense rankers; an event signal with
+58 events a year needs its own forward test, a new NSE source inside the live run, and the last of
+the three slots, for a signal that would take about 15 years to confirm. That is the owner's call.
+
+Next in the queue: (1) reported earnings surprise, once a throttled overnight pull of results XBRL
+files is approved and disk space is freed; (2) a denser source for insider and pledge disclosures
+(the depositories' system-driven disclosures, or BSE); (3) repair the announcement parser (F31)
+before any further announcement-text trial.
 
 ### Harness validation (2026-11-12, before any trial was scored)
 

@@ -224,3 +224,4 @@ def test_insider_buys_need_size_freshness_membership_and_cooldown():
     assert sorted(zip(ev.i, ev.col)) == [(d0, 3), (d0 + 1, 8)]
     assert len(signals.insider_buys(rd, cooldown=0)) == 3 and len(signals.insider_buys(rd, max_lag_days=None)) == 3
     assert len(signals.insider_buys(rd.truncated(d0))) == 1                        # the late filing is not known yet
+    assert signals.insider_buys(rd.truncated(d0 - 30)).empty                       # before any disclosure exists
