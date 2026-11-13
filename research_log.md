@@ -229,6 +229,65 @@ failure can no longer fail a run, and the dry run prints what every model would 
   neither challenger met the rule at the 375-session checkpoint (t 1.92 and 2.13 against 2.24).
   A year and a half is not enough even in sample.
 
+## Phase 4 graduation criteria v1 (frozen 2026-11-13, before any forward score exists)
+
+Graduation is the point at which the owner may *consider* real capital. It decides nothing by
+itself: real capital always needs the owner's explicit decision. Only the forward record counts.
+Tax and regulation were checked on 2026-11-13 (sources in `live_trading.md`).
+
+| # | Criterion | Requirement |
+|---|---|---|
+| G1 | Standing | The model is the champion (Phase 3 rule plus the owner's holdout check), has held the seat for at least 250 scored sessions, and is not `decaying` |
+| G2 | Minimum duration | At least 500 scored sessions of its own forward predictions at 20 sessions (two years). The window must contain a fall of 10% or more in NIFTYBEES from a peak; if the market never fell that far, the minimum is 750 sessions |
+| G3 | IC | Mean forward rank IC at 20 sessions of at least 0.02, and positive at 5 sessions |
+| G4 | t-stat | t of the 20-session IC at least 2.0 (mean / sd x sqrt(sessions / 20)) |
+| G5 | Against Nifty after costs and taxes | Paper portfolio (top 20, 20-session hold, Rs 10 lakh, all charges and slippage), with capital-gains tax paid each financial year and the book liquidated at the end, must beat NIFTYBEES bought, held and liquidated the same way by at least 3 percentage points a year |
+| G6 | Against the universe | The same portfolio before tax must beat the universe held after costs. Otherwise the result is small-cap exposure, not stock picking |
+| G7 | Drawdown | Worst fall of the paper portfolio no deeper than the larger of 25% and 1.5 times NIFTYBEES's worst fall in the window. Worst fall relative to the universe no deeper than 15% |
+| G8 | Record integrity | Predictions written on at least 95% of sessions in the window; `random` shows no skill (abs t below 3 at every horizon); nothing voided in the last 250 sessions |
+| G9 | Owner's checks (by hand) | Cost schedule matched to a real contract note from the broker to be used; tax treatment confirmed with a chartered accountant; broker API access and static IP in place |
+
+Tracked by `nsr.graduation` and shown on the scoreboard. G9 is never ticked by code.
+
+### Why these numbers
+
+- **IC 0.02 and t 2.0.** 0.02 is half the weakest backtest IC among the current candidates; below it
+  the top-20 book cannot be expected to clear costs and tax. t = 2.0 is asked of the model's own IC,
+  on top of the Phase 3 margin on what it adds and the holdout check, which are separate evidence.
+- **No t-stat on profit.** Confirming an excess Sharpe of 0.5 takes about 16 years, so a significance
+  test on the paper P&L could never be met. The P&L has to clear fixed margins instead (G5 to G7);
+  the statistical burden sits on IC.
+- **3 points over Nifty.** The simulation assumes 10 bps of slippage a side. If the truth is 30 bps,
+  a book that turns over about 5 times a year loses another 2 points a year. 3 points leaves that
+  and a little more.
+- **Tax.** Short-term gains on listed shares are taxed at 20% and long-term gains at 12.5% above
+  Rs 1.25 lakh a year, plus 4% cess. A 20-session book is almost all short-term; NIFTYBEES held for
+  two years is long-term. The comparison is made after that asymmetry. Dividends (taxed at slab
+  rate) are ignored on both sides, which favours the paper portfolio slightly. If the tax office
+  treats frequent trading as business income the rate is the slab rate; the scoreboard also shows
+  the result at 31.2%.
+- **Drawdown.** Limits are relative to the market because a long-only book cannot avoid a crash. The
+  backtests fell 41% to 54% at their worst over 14 years; the 25% floor is what a two-year window
+  should stay inside unless something is wrong. Tracking error was about 11% a year, so a 15% fall
+  against the universe is a rare event for a working model.
+- **A bad market in the window.** Two calm years say nothing about how the book behaves when
+  everything falls and sells are blocked at lower bands.
+
+### How long, honestly
+
+Sessions for the 20-session IC to reach t = 2.0:
+
+| Model | If the backtest holds in full | If half survives |
+|---|---|---|
+| `ear_drift_60` | about 280 | about 1,110 |
+| `ens_mom_ear` | about 620 | about 2,480 |
+| `mom_12_1` (for scale) | about 890 | about 3,550 |
+
+A challenger needs roughly 500 to 625 sessions to be promoted and 250 more in the seat, so the
+earliest graduation is about three to three and a half years away if the backtests hold in full. If
+half the backtest edge survives, it is closer to ten. Nothing in the design can shorten that except
+stronger or more independent signals.
+
 ## Trials
 
 ### T-0001  Delivery-backed moves (deliv_ret_corr_60)      registered: 2026-11-12   status: tested
