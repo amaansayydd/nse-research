@@ -213,6 +213,22 @@ same run exposed that `ear_drift_60` was silent because the notice parser read n
 F31). Fixes: the job now runs a pinned copy of committed code (`scripts/deploy.sh`), a report
 failure can no longer fail a run, and the dry run prints what every model would produce.
 
+### Verification before go-live (2026-11-13)
+
+- 125 tests pass on the deployed copy, including one that the live `ear_drift_60` equals the
+  backtested signal on a synthetic panel with reschedules, repeat notices and weekend meetings.
+- Real data: over the 496 rehearsal sessions the live code logged 203,620 `ear_drift_60` scores; every
+  one equals the backtest's (largest difference 0.0), with the same names every day
+  (`research/results/parity_ear_drift_60.json`).
+- Dress rehearsal with all five models: PASS on every check, including rebuild-from-raw as of three
+  dates and the overwritten-future test (`rehearsal/REPORT.md`).
+- Live dry run from the deployed copy: 10,202 notices over 162 sessions, none empty; `ear_drift_60`
+  ranks 444 names (backtest average 439), `ens_mom_ear` 498.
+- One real run of the scheduled job from the pinned copy: exit 0, scoreboard written, pushed.
+- Worth knowing: replayed over the last two research years, which the backtest had already seen,
+  neither challenger met the rule at the 375-session checkpoint (t 1.92 and 2.13 against 2.24).
+  A year and a half is not enough even in sample.
+
 ## Trials
 
 ### T-0001  Delivery-backed moves (deliv_ret_corr_60)      registered: 2026-11-12   status: tested

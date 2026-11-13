@@ -1,0 +1,9 @@
+{
+ "days_compared": 496,
+ "names_compared": 203620,
+ "max_abs_score_diff": 0.0,
+ "days_with_different_names": 0,
+ "silent_days": 0,
+ "silent_days_where_backtest_also_has_under_100_names": 0,
+ "ok": true
+}
