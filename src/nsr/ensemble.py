@@ -44,3 +44,14 @@ def combine(pcts: dict[str, np.ndarray], w: dict[str, float]) -> np.ndarray:
     have = np.isfinite(stack)
     s = sum(w[k] * np.where(have[j], stack[j], 0.5) for j, k in enumerate(names))
     return np.where(have.any(axis=0), s, np.nan)
+
+
+def weights_from_scores(scores: pd.DataFrame, asof: str, components: tuple[str, ...] = COMPONENTS) -> tuple[dict, dict]:
+    """Weights for a prediction made on `asof` (YYYY-MM-DD), from the 20-session rank ICs in the
+    score log whose outcome window had closed by then. Returns (weights, evidence per component)."""
+    ic_sum, ic_n = {k: 0.0 for k in components}, {k: 0 for k in components}
+    if len(scores):
+        s = scores[(scores.horizon == WEIGHT_H) & scores.model.isin(components) & (scores.scored_through <= asof)]
+        for k, g in s.groupby("model"):
+            ic_sum[k], ic_n[k] = float(g.ic.sum()), int(len(g))
+    return weights(ic_sum, ic_n, components), {k: {"ic_sum": round(ic_sum[k], 6), "ic_n": ic_n[k]} for k in components}

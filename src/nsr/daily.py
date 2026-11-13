@@ -3,7 +3,8 @@
   1. download any new NSE files, the corporate-actions register, symbol changes
   2. rebuild the production panel (outside the project: it spans the holdout window)
   3. score predictions whose outcome window has completed -> scores.csv, scoreboard.md
-  4. predict for the latest session, if it has not been predicted and it is not too late
+  4. predict for the latest session, for every model that has not predicted it yet, if it is
+     not too late. Baselines and shadow challengers are written in the same run
   5. commit and push; write one line to run_log.md
 
 Never backfills: a session whose next open may already have happened is logged
@@ -24,14 +25,17 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import requests
 
-from . import api, config, predict, report, score
+from . import api, champion, config, ensemble, monitor, notices, predict, report, score
 from .build import build
 from .download import HEADERS, daterange, fetch_one, load_manifest, manifest_path, raw_path
+from .models import ALL_MODELS, ENSEMBLES, ROLES
 from .panel import Panel
 
 RUN_LOG = config.PROJECT / "run_log.md"
 SCOREBOARD = config.PROJECT / "scoreboard.md"
-TRACKED = ["predictions.csv", "scores.csv", "scoreboard.md", "run_log.md", "data/raw/manifest.csv"]
+WEIGHTS_LOG = config.PROJECT / "ensemble_weights.csv"
+TRACKED = ["predictions.csv", "scores.csv", "scoreboard.md", "run_log.md", "data/raw/manifest.csv", "ensemble_weights.csv"]
+MAX_SILENT_NOTICE_SESSIONS = 30
 ALERT_AFTER = 3
 ALERT_LINE = "> **ALERT: the last {n} runs failed. Check the notes column below.**"
 FORWARD_START = config.HOLDOUT_END + timedelta(days=1)
@@ -101,14 +105,47 @@ def refresh_reference(today: date) -> list[str]:
     return notes
 
 
-def forward_scoreboard(panel: Panel, preds: pd.DataFrame, now: datetime) -> None:
-    scores = pd.read_csv(config.SCORES) if config.SCORES.exists() and config.SCORES.stat().st_size else pd.DataFrame(columns=score.SCORE_COLUMNS)
+def load_scores() -> pd.DataFrame:
+    if config.SCORES.exists() and config.SCORES.stat().st_size:
+        return pd.read_csv(config.SCORES, dtype={"ref_model": str})
+    return pd.DataFrame(columns=score.SCORE_COLUMNS)
+
+
+def forward_scoreboard(panel: Panel, preds: pd.DataFrame, scores: pd.DataFrame, now: datetime,
+                       state: dict, weights: dict | None) -> None:
     sims = pd.DataFrame()
     if len(preds):
         first = panel.dates.get_indexer([pd.Timestamp(preds.asof_date.min())])[0]
         if first >= 0:
             sims = report.run_sims(panel, preds, int(first), len(panel.dates) - 1)
-    report.write_scoreboard(SCOREBOARD, scores, sims, preds.asof_date.nunique() if len(preds) else 0, f"{now:%Y-%m-%d %H:%M} IST")
+    challengers = [m for m in ALL_MODELS if ROLES[m] == "challenger" and m not in state["retired"]]
+    decay = monitor.decay_table(scores)
+    report.write_scoreboard(SCOREBOARD, scores, sims, preds.asof_date.nunique() if len(preds) else 0,
+                            f"{now:%Y-%m-%d %H:%M} IST", state=state,
+                            comparison=champion.compare(scores, state, challengers),
+                            decay=decay, retire=monitor.retire_flags(scores, decay) if len(decay) else {},
+                            weights=weights)
+
+
+def load_notices(panel: Panel, notes: list[str], dry_run: bool = False) -> None:
+    """Board-meeting notices for the challengers. A failure here silences them, not the run."""
+    try:
+        bm, cov = notices.recent(panel.dates)
+        if dry_run:
+            notes.append(f"notices {cov}")
+        panel.tables["board_meetings"] = bm
+        bm.to_parquet(config.PROD_DIR / "clean" / "board_meetings.parquet", index=False)
+        if cov["sessions_without_notices"] > MAX_SILENT_NOTICE_SESSIONS or not cov["notices"]:
+            notes.append(f"board-meeting notices thin: {cov['notices']} notices, "
+                         f"{cov['sessions_without_notices']} of {cov['sessions']} sessions have none")
+    except Exception as e:
+        notes.append(f"board-meeting notices unavailable ({type(e).__name__}: {str(e)[:80]})")
+
+
+def log_weights(asof: str, weights: dict, evidence: dict) -> None:
+    rows = pd.DataFrame([{"asof_date": asof, "ensemble": ensemble.NAME, "component": k, "weight": round(w, 6),
+                          **evidence[k]} for k, w in weights.items()])
+    rows.to_csv(WEIGHTS_LOG, mode="a", header=not WEIGHTS_LOG.exists(), index=False)
 
 
 # --------------------------------------------------------------------- cycle
@@ -123,14 +160,18 @@ def cycle(now: datetime, dry_run: bool = False) -> tuple[str, str, int, str]:
         if recent:
             notes.append(f"unusable files: {recent}")
     panel = Panel.load()
+    load_notices(panel, notes, dry_run)
     latest = panel.dates[-1]
+    state = champion.load_state()
 
     preds = pd.read_csv(config.PREDICTIONS)
-    new_scores = score.score_matured(panel, preds, score.done_keys(config.SCORES))
+    counted = predict.drop_void(preds)
+    new_scores = score.score_matured(panel, counted, score.done_keys(config.SCORES), ref_model=state["reference"])
     if not dry_run:
         score.append_scores(new_scores, config.SCORES)
     if len(new_scores):
         notes.append(f"scored {len(new_scores)} date-model-horizon results")
+    scores = load_scores() if not dry_run else pd.concat([load_scores(), new_scores.round(6)], ignore_index=True)
 
     # sessions in the forward period that never got a prediction are gone for good
     logged = set(preds.asof_date)
@@ -143,26 +184,50 @@ def cycle(now: datetime, dry_run: bool = False) -> tuple[str, str, int, str]:
 
     outcome, n = "OK", 0
     key = latest.strftime("%Y-%m-%d")
-    if latest <= pd.Timestamp(config.HOLDOUT_END):
+    have = set(preds[preds.asof_date == key].model)
+    todo = {m for m in ALL_MODELS if m not in have and m not in state["retired"]}
+    weights, evidence = ensemble.weights_from_scores(scores, key)
+    if dry_run:
+        # health check: what every model would produce for the latest session. Never written.
+        probe: list[str] = []
+        df = predict.make_predictions(panel, len(panel.dates) - 1, now, "dry", "dry", weights=weights, notes=probe)
+        notes.append("dry run, not written: " + ", ".join(f"{m} {c}" for m, c in df.model.value_counts().items()))
+        notes += probe + [f"still to write for {key}: {sorted(todo) or 'nothing'}"]
+        n = len(df)
+    elif latest <= pd.Timestamp(config.HOLDOUT_END):
         outcome = "NO_NEW_SESSION"
         notes.append("no forward-period session published yet")
-    elif key in logged:
+    elif not todo:
         outcome = "ALREADY_DONE"
     else:
         try:
             predict.assert_fresh(latest, now)
-            df = predict.make_predictions(panel, len(panel.dates) - 1, now, f"{now:%Y%m%dT%H%M}", git("rev-parse", "--short", "HEAD"))
+            quiet: list[str] = []
+            df = predict.make_predictions(panel, len(panel.dates) - 1, now, f"{now:%Y%m%dT%H%M}",
+                                          config.release() or git("rev-parse", "--short", "HEAD"),
+                                          only=todo, weights=weights, notes=quiet)
             n = len(df)
-            if not dry_run:
-                predict.append_predictions(df, config.PREDICTIONS)
-                preds = pd.concat([preds, df], ignore_index=True)
+            if have and not n:
+                outcome = "ALREADY_DONE"         # only silent challengers were left to do
             else:
-                notes.append("dry run: predictions computed but not written")
+                notes += quiet
+            if have and n:
+                notes.append("added " + ", ".join(sorted(set(df.model))))
+            if n:
+                predict.append_predictions(df, config.PREDICTIONS)
+                counted = pd.concat([counted, df], ignore_index=True)
+                if set(ENSEMBLES) & set(df.model):
+                    log_weights(key, weights, evidence)
         except predict.StalePrediction as e:
-            outcome = "STALE_SKIPPED"
-            notes.append(str(e))
+            outcome = "ALREADY_DONE" if have else "STALE_SKIPPED"
+            if not have:
+                notes.append(str(e))
     if not dry_run:
-        forward_scoreboard(panel, preds, now)
+        try:                                     # a report problem must never cost a run its predictions
+            forward_scoreboard(panel, counted, scores, now, state, weights)
+        except Exception as e:
+            notes.append(f"scoreboard not updated ({type(e).__name__}: {str(e)[:80]})")
+            (config.PROD_DIR / "last_error.txt").write_text(traceback.format_exc())
     return outcome, key, n, "; ".join(notes)
 
 

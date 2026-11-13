@@ -19,7 +19,7 @@ from .models import HORIZONS
 from .panel import Panel
 
 SCORE_COLUMNS = ["asof_date", "model", "model_version", "horizon", "n", "ic", "top_excess", "top_hit",
-                 "brier", "universe_ret", "scored_through"]
+                 "brier", "universe_ret", "ref_model", "ic_ex_ref", "scored_through"]
 TOP = 0.9  # top decile by rank_pct
 
 
@@ -27,8 +27,27 @@ def _rank(a: np.ndarray) -> np.ndarray:
     return pd.Series(a).rank(method="average").to_numpy()
 
 
-def score_group(panel: Panel, g: pd.DataFrame, i: int, h: int) -> dict | None:
-    """Metrics for one (as-of session, model) group at one horizon."""
+def ic_excluding(rank_model: np.ndarray, rank_ref: np.ndarray, r: np.ndarray) -> float:
+    """Rank IC of what a model says beyond the reference: the model's ranks with the reference's
+    ranks regressed out, correlated with realised returns. Noise the two models share cancels,
+    so this is the sharpest test of whether a challenger adds anything. NaN if fewer than 20
+    names have all three values, or if the model is the reference in other words."""
+    ok = np.isfinite(rank_model) & np.isfinite(rank_ref) & np.isfinite(r)
+    if ok.sum() < 20:
+        return np.nan
+    x, z, y = _rank(rank_model[ok]), _rank(rank_ref[ok]), _rank(r[ok])
+    xc, zc = x - x.mean(), z - z.mean()
+    if not zc.any() or not xc.any():
+        return np.nan
+    e = xc - (zc @ xc) / (zc @ zc) * zc
+    if e.std() < 1e-6 * x.std():
+        return np.nan
+    return float(np.corrcoef(_rank(e), y)[0, 1])
+
+
+def score_group(panel: Panel, g: pd.DataFrame, i: int, h: int, ref: pd.Series | None = None) -> dict | None:
+    """Metrics for one (as-of session, model) group at one horizon. `ref` is the reference
+    model's rank_pct that day, indexed by symbol."""
     sym_to_sid = pd.Series(panel.symbols_on(i).index, index=panel.symbols_on(i).to_numpy())
     sid = sym_to_sid.reindex(g.symbol.to_numpy()).to_numpy()
     have = ~pd.isna(sid)
@@ -47,24 +66,32 @@ def score_group(panel: Panel, g: pd.DataFrame, i: int, h: int) -> dict | None:
         "top_hit": float(beat[top].mean()) if top.any() else np.nan,
         "brier": float(np.mean((p - beat) ** 2)),
         "universe_ret": float(r.mean()),
+        "ic_ex_ref": np.nan if ref is None else ic_excluding(
+            rank_pct, ref.reindex(g.symbol.to_numpy()[ok]).to_numpy(float), r),
     }
 
 
-def score_matured(panel: Panel, preds: pd.DataFrame, done: set[tuple[str, str, int]], upto: int | None = None) -> pd.DataFrame:
-    """Score every (date, model, horizon) not in `done` whose window is complete by session `upto`."""
+def score_matured(panel: Panel, preds: pd.DataFrame, done: set[tuple[str, str, int]], upto: int | None = None,
+                  ref_model: str | None = None) -> pd.DataFrame:
+    """Score every (date, model, horizon) not in `done` whose window is complete by session `upto`.
+    `ref_model` is the model every other model's ic_ex_ref is measured against."""
     upto = len(panel.dates) - 1 if upto is None else upto
     rows = []
-    for (asof, model), g in preds.groupby(["asof_date", "model"], sort=True):
+    for asof, day in preds.groupby("asof_date", sort=True):
         i = panel.dates.get_indexer([pd.Timestamp(asof)])[0]
-        if i < 0:
+        if i < 0 or i + 2 > upto:
             continue
-        for h in HORIZONS:
-            if (asof, model, h) in done or i + 1 + h > upto:
-                continue
-            m = score_group(panel, g, int(i), h)
-            if m:
-                rows.append({"asof_date": asof, "model": model, "model_version": g.model_version.iloc[0],
-                             "horizon": h, **m, "scored_through": panel.dates[i + 1 + h].strftime("%Y-%m-%d")})
+        gr = day[day.model == ref_model] if ref_model else day.iloc[0:0]
+        ref = gr.set_index("symbol").rank_pct if len(gr) else None
+        for model, g in day.groupby("model", sort=True):
+            for h in HORIZONS:
+                if (asof, model, h) in done or i + 1 + h > upto:
+                    continue
+                m = score_group(panel, g, int(i), h, None if model == ref_model else ref)
+                if m:
+                    rows.append({"asof_date": asof, "model": model, "model_version": g.model_version.iloc[0],
+                                 "horizon": h, **m, "ref_model": ref_model or "",
+                                 "scored_through": panel.dates[i + 1 + h].strftime("%Y-%m-%d")})
     return pd.DataFrame(rows, columns=SCORE_COLUMNS)
 
 
@@ -96,7 +123,8 @@ def summarize(scores: pd.DataFrame) -> pd.DataFrame:
                     "first": g.asof_date.min(), "last": g.asof_date.max(),
                     "ic_mean": g.ic.mean(), "ic_sd": sd, "ic_t": t,
                     "top_excess_mean": g.top_excess.mean(), "top_hit": g.top_hit.mean(),
-                    "brier": g.brier.mean(), "days_for_t2_at_this_ic": need})
+                    "brier": g.brier.mean(), "ic_ex_ref_mean": g.ic_ex_ref.mean() if "ic_ex_ref" in g else np.nan,
+                    "days_for_t2_at_this_ic": need})
     return pd.DataFrame(out)
 
 

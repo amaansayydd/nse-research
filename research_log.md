@@ -151,6 +151,68 @@ that has no row in `trial_ledger.csv`.
 Known gap: the daily bundles carry almost no announcement or board-meeting text from March to
 November 2022 (data/README.md F30). Text-based trials have no signal in those months.
 
+## Phase 3 rules v1 (frozen 2026-11-13, before any challenger prediction that counts)
+
+Sized with `python -m nsr.research.phase3_plan` (research-window backtests, planning only; output in
+`research/results/phase3_plan.json`). Code: `nsr.champion`, `nsr.monitor`, `nsr.ensemble`.
+
+| Item | Rule |
+|---|---|
+| Champion seat | Empty. Baselines are yardsticks and never hold it. While it is empty the reference to beat is `mom_12_1`, the strongest known effect here. Once there is a champion, it is the reference |
+| Shadow | A candidate that passes Phase 2 predicts inside the same scheduled run as the baselines, to the same log. At most 3 challengers at a time (enforced in `nsr.models`). A challenger that fails or can rank fewer than 100 names is silent that day; it can never stop the baselines |
+| Every comparison is a trial | Each challenger gets an F- row in `trial_ledger.csv` when it starts. N = challengers ever started, including retired ones. It never goes down |
+| Decision horizon | 20 sessions: the horizon every current challenger was registered at, and the shortest one at which a top-20 book pays its costs |
+| Minimum period | 250 scored sessions at 20 sessions (about a year, four results seasons, twelve independent windows). Nothing is decided earlier, whatever the numbers |
+| Checkpoints | Decisions are read only at 250, 375, 500, ... scored sessions, on the sessions up to that checkpoint. The scoreboard shows the running numbers but they decide nothing between checkpoints |
+| Statistic | `ic_ex_ref`: the challenger's daily rank IC after the reference's ranks are regressed out of its ranks. t = mean / sd x sqrt(sessions / 20). Noise the two models share cancels, so this is the sharpest valid test of "does it know something the reference does not" |
+| Margin | t of `ic_ex_ref` at least c(N) = the normal quantile at 1 - 0.025/N: 1.96, 2.24, 2.39, 2.58 for N = 1, 2, 3, 5 |
+| Also required | Challenger's mean forward IC above zero and above the reference's on the same sessions; top-decile mean excess above zero; simulated top 20 (20-session hold, after costs, up to the checkpoint) at least the reference's and the universe hurdle; `random` shows no skill (abs t below 3 at every horizon), otherwise everything freezes for a scorer audit |
+| Two eligible at once | The one with the higher mean forward IC at 20 sessions |
+| What eligibility earns | The owner's holdout check (one of the 3 looks) and the owner's decision. Only then is `champion.json` changed and the promotion written in `changelog.md` |
+| Reversible | The former champion stays in the daily run for at least 250 sessions. It returns to the seat if the new champion is retired by the decay rule, or if at a checkpoint the champion's mean IC is below the former champion's with a paired t at or below -1.96 |
+| Futility | From 500 scored sessions, a challenger whose `ic_ex_ref` t is below 0.5 at a checkpoint is retired and gets a postmortem. Its slot frees; N does not change |
+| Decay monitor | One-sided CUSUM on each model's forward IC at 1, 5 and 20 sessions, sampled every h sessions so observations share no outcome days. In-control level: half the backtest IC (`models/expected_ic_v1.json`). It tests for a fall to zero, with about one false alarm per stream in 5,000 sessions. An alarm marks the model `decaying` and dates the change (the point the statistic last sat at zero) |
+| Retirement | A challenger or champion is retired when it is `decaying` and its mean IC at 20 sessions over the last 250 scored sessions is at or below zero. A postmortem (POSTMORTEM command) is written to `lessons.md`. Baselines are flagged but never retired |
+| Ensemble | `ens_mom_ear` (T-0004). Component weights start equal and move only on matured forward 20-session ICs, shrunk by 500 pseudo-days at IC 0.02. Weights used are logged in `ensemble_weights.csv`. A retired component leaves the ensemble at the next version |
+| Voiding | A (date, model) can be struck from scoring only for a process failure and only before any outcome for it is scored. The rows stay in `predictions.csv`; the reason goes in `void_predictions.csv` and `changelog.md` |
+| Learning | Every retirement, promotion and failed batch adds to `lessons.md`, including the family scorecard there, which sets the prior for the next hypothesis in that family |
+| What counts | Only the forward scoreboard. Backtests size the test and set expectations; they never decide |
+
+### Why this margin, and how long it will take
+
+The obvious test, challenger IC minus reference IC, is close to useless at 20 sessions. In the
+backtest the ensemble beats momentum by 0.006 of IC a day with a paired sd of 0.032; reaching
+t = 2.24 on that takes about 3,000 sessions (12 years). So the margin is placed on `ic_ex_ref`, and
+the head-to-head is required only in direction.
+
+Sessions needed for the `ic_ex_ref` t to reach c(2) = 2.24 at 20 sessions (N = 2 today):
+
+| Challenger | Backtest `ic_ex_ref` (mean, sd) | If the backtest holds in full | If half of it survives |
+|---|---|---|---|
+| `ear_drift_60` | 0.034, 0.070 | about 420 sessions (first possible checkpoint: 500, two years) | about 1,660 (6.6 years) |
+| `ens_mom_ear` | 0.028, 0.063 | about 510 sessions (checkpoint 625, 2.5 years) | about 2,060 (8 years) |
+
+Results drift alone also has to beat momentum's raw IC in direction, which the backtest says it
+does not (0.041 against 0.051), so the ensemble is the likelier route to the seat. Checking twice a
+year raises the chance of a false "eligible" above the nominal 2.5% (roughly 5 to 8% over eight
+checkpoints). That is accepted because eligibility only earns a holdout check, a promotion is
+reversible, and no money is involved.
+
+Decay detection is slow for the same reason. An edge that vanished today would take about 410
+sessions to raise the alarm on results drift's 1-session stream and about 900 on its 20-session
+stream; momentum takes about 1,070 and 1,580.
+
+### Incident, 2026-11-13 07:56: unfinished code ran live
+
+The scheduled job still ran whatever was in the working folder. The 07:56 run picked up Phase 3
+code that was half written and not committed. It appended 489 `ens_mom_ear` rows for as-of
+2026-11-12 (labelled with commit c4dc8a4, which does not contain that code), then crashed while
+writing the scoreboard and logged FAIL. No baseline row was affected and nothing had been scored.
+Those 489 rows are void (`void_predictions.csv`): they stay in the log and are never scored. The
+same run exposed that `ear_drift_60` was silent because the notice parser read nothing (data/README
+F31). Fixes: the job now runs a pinned copy of committed code (`scripts/deploy.sh`), a report
+failure can no longer fail a run, and the dry run prints what every model would produce.
+
 ## Trials
 
 ### T-0001  Delivery-backed moves (deliv_ret_corr_60)      registered: 2026-11-12   status: tested
@@ -263,7 +325,7 @@ Result         : FAIL (tested 2026-11-12, 3 hypotheses registered, required t 3.
                  Not adopted. "Avoid buying for 5 sessions after an order announcement" is a new
                  hypothesis and would need its own registration.
 
-### T-0004  Momentum plus results-reaction ensemble (ens_mom_ear)      registered: 2026-11-12   status: registered
+### T-0004  Momentum plus results-reaction ensemble (ens_mom_ear)      registered: 2026-11-12   status: tested
 Mechanism      : No new mechanism. Two known effects whose scores are nearly unrelated (correlation
                  0.10) are averaged, so their errors partly cancel. It should lift IC per unit of
                  noise and soften each part's dead stretches (momentum since late 2023, results
@@ -292,7 +354,28 @@ Falsified if   : IC t below 3, residual IC t below 2, or the top 20 does not bea
                  costs.
 Expected life  : As its parts.
 Prior          : About 70% for the IC gates (both parts pass them alone), about 50% for every gate.
-Result         : (not run yet)
+Result         : PASS (tested 2026-11-12, 4 hypotheses registered, required t 3.0). Known effects
+                 combined: a baseline-grade challenger, not a discovery.
+                 For: rank IC at 20 sessions 0.057, sd 0.159, t 4.69 over 3,415 sessions, positive in
+                 13 of 14 years; residual IC 0.020, t 4.69; top decile +1.11% per 20 sessions before
+                 costs; long-only top 20 beat the universe by 16.3% a year after costs (17.1% if
+                 silent holdings go to zero), 12 winning years of 14, excess Sharpe 1.27, deflated
+                 Sharpe 0.91 with 4 trials, maximum drawdown -41%, turnover 4.8 times a year.
+                 Variants: equal weights 0.056 (t 5.2), 2/3 momentum 0.057 (t 4.6), 1/3 momentum
+                 0.050 (t 5.9).
+                 Against: it is mostly momentum. Its score correlates 0.90 with 12-1 momentum (the
+                 shifting weights settled near 2/3 momentum) and its IC is as noisy as momentum's
+                 (sd 0.159). Against momentum alone the IC gain is 0.006 a day (paired t 2.4 over 14
+                 years): small. 2025 is negative (-0.017); 2016 and 2020 are near zero; 2022-2025 has
+                 IC 0.033, t 1.9. Most of the IC is in ranks 251-500 (0.072, t 6.1; top 100: 0.037,
+                 t 2.2). The shifting weights added nothing over equal weights in the backtest.
+                 The portfolio result is larger than the IC gain suggests (16.3% a year against 9.5%
+                 for momentum and 5.3% for results drift) and sits just under the excess-Sharpe
+                 tripwire (1.27 against 1.5). Checked: the look-ahead test is exact, the IC is what
+                 two signals with ICs 0.051 and 0.041 and correlation 0.10 imply (about 0.06), and
+                 the top-decile return (1.11% per 20 sessions) is in line with a top-20 book. No
+                 leak found, but a top-20 backtest in small names flatters; expect less forward.
+                 Status: Phase 3 shadow slot. Holdout look not spent.
 
 ### Harness validation (2026-11-12, before any trial was scored)
 

@@ -17,7 +17,11 @@ from datetime import date, datetime, time
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-PROJECT = Path(__file__).resolve().parents[2]
+# CODE is where this copy of the code and its frozen model files live. PROJECT is where the
+# records and data live. They are the same folder when run from the working tree. The scheduled
+# job runs a pinned copy of the code (scripts/deploy.sh) and points NSR_PROJECT at the project.
+CODE = Path(__file__).resolve().parents[2]
+PROJECT = Path(os.environ.get("NSR_PROJECT", str(CODE)))
 DATA = PROJECT / "data"
 RAW = DATA / "raw"
 CLEAN = DATA / "clean"
@@ -76,6 +80,12 @@ def clean_dir() -> Path:
 def assert_production(what: str) -> None:
     if not is_production():
         raise HoldoutViolation(f"{what} is production-only: it contains holdout-window data")
+
+
+def release() -> str | None:
+    """Commit id of the deployed copy this code is running from, or None in the working tree."""
+    f = CODE / "RELEASE"
+    return f.read_text().strip() if f.exists() else None
 
 
 def assumed_available_at(d: date) -> datetime:

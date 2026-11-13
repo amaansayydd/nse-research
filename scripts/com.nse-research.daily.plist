@@ -5,14 +5,17 @@
   <key>Label</key><string>com.nse-research.daily</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Users/amaansayydd/nse-research/.venv/bin/python</string>
+    <string>/Users/amaansayydd/nse_production/venv/bin/python</string>
     <string>-m</string>
     <string>nsr.daily</string>
   </array>
-  <key>WorkingDirectory</key><string>/Users/amaansayydd/nse-research</string>
+  <key>WorkingDirectory</key><string>/Users/amaansayydd/nse_production</string>
   <key>EnvironmentVariables</key>
   <dict>
     <key>PATH</key><string>/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <!-- The job runs a pinned copy of committed code (scripts/deploy.sh), never the working folder. -->
+    <key>PYTHONPATH</key><string>/Users/amaansayydd/nse_production/app/current/src</string>
+    <key>NSR_PROJECT</key><string>/Users/amaansayydd/nse-research</string>
   </dict>
   <!-- 20:30 is the main run. 22:30 catches late publication. 07:45 catches a Mac that was asleep,
        and is still before the 09:00 no-backfill deadline. Runs are idempotent. -->

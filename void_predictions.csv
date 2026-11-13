@@ -1,0 +1,2 @@
+asof_date,model,decided_at_ist,reason
+2026-11-12,ens_mom_ear,2026-11-13 10:10,"written at 07:56 on 2026-11-13 by unfinished code in the working tree that had not been committed (the code_commit label c4dc8a4 is wrong for these rows); the results-drift component was empty so the ranking was momentum alone; voided before any outcome was scored"

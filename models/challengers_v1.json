@@ -1,0 +1,21 @@
+{
+  "version": "v1",
+  "fit_sessions": [
+    "2012-01-02",
+    "2023-10-05"
+  ],
+  "every_nth_session": 5,
+  "note": "p_beat = 0.5 + slope * (rank_pct - 0.5); random is fixed at 0",
+  "slopes": {
+    "ear_drift_60": {
+      "1": 0.0261,
+      "5": 0.0416,
+      "20": 0.0666
+    },
+    "ens_mom_ear": {
+      "1": 0.0335,
+      "5": 0.059,
+      "20": 0.0925
+    }
+  }
+}

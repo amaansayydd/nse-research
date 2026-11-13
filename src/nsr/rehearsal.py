@@ -19,9 +19,9 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import config, predict, report, score
+from . import champion, config, ensemble, monitor, notices, predict, report, score
 from .build import build
-from .models import HORIZONS, MODELS, VERSION
+from .models import ALL_MODELS, HORIZONS, ROLES, VERSION
 from .panel import Panel
 
 OUT = config.PROJECT / "rehearsal"
@@ -33,17 +33,33 @@ def window(panel: Panel) -> tuple[int, int]:
     return int(np.searchsorted(panel.dates, first)), len(panel.dates) - 1
 
 
-def calibrate(panel: Panel, step: int = 5) -> dict:
-    """Slope of P(beat the median) on rank, per model and horizon, from sessions
-    that end well before the rehearsal window. Frozen into models/baselines_v1.json."""
+def research_notices() -> pd.DataFrame | None:
+    """Board-meeting notices parsed from research-window bundles (python -m nsr.research.text)."""
+    f = config.CLEAN / "research_text" / "board_meetings.parquet"
+    return pd.read_parquet(f) if f.exists() else None
+
+
+def set_notices(panel: Panel, bm: pd.DataFrame | None, i: int) -> None:
+    """Give the panel what the live run would hold on session i: notices from the last 240 days."""
+    if bm is not None:
+        panel.tables["board_meetings"] = notices.window(bm, panel.dates[i])
+
+
+def calibrate(panel: Panel, step: int = 5, challengers: bool = False) -> dict:
+    """Slope of P(beat the median) on rank, per model and horizon, from sessions that end well
+    before the rehearsal window. Baselines are frozen in models/baselines_v1.json, challengers
+    in models/challengers_v1.json (ensemble fitted at equal weights)."""
     start, _ = window(panel)
     last = start - max(HORIZONS) - 5
     first = int(np.searchsorted(panel.dates, pd.Timestamp("2012-01-01")))
-    acc = {m: {h: [0.0, 0.0] for h in HORIZONS} for m in MODELS}
+    names = [m for m in ALL_MODELS if (ROLES[m] == "challenger") == challengers]
+    acc = {m: {h: [0.0, 0.0] for h in HORIZONS} for m in names}
     now = datetime.now(config.IST)
-    zero = {m: {str(h): 0.0 for h in HORIZONS} for m in MODELS}
+    zero = {m: {str(h): 0.0 for h in HORIZONS} for m in ALL_MODELS}
+    bm = research_notices() if challengers else None
     for i in range(first, last, step):
-        df = predict.make_predictions(panel, i, now, "calibration", "-", zero)
+        set_notices(panel, bm, i)
+        df = predict.make_predictions(panel, i, now, "calibration", "-", zero, only=set(names))
         for model, g in df.groupby("model"):
             cols = panel.col(g.sid.to_numpy())
             x = g.rank_pct.to_numpy() - 0.5
@@ -53,12 +69,14 @@ def calibrate(panel: Panel, step: int = 5) -> dict:
                 y = (r[ok] > np.median(r[ok])).astype(float) - 0.5
                 acc[model][h][0] += float(x[ok] @ y)
                 acc[model][h][1] += float(x[ok] @ x[ok])
-    slopes = {m: {str(h): (0.0 if m == "random" else round(v[0] / v[1], 4)) for h, v in d.items()} for m, d in acc.items()}
+    slopes = {m: {str(h): (0.0 if m == "random" or not v[1] else round(v[0] / v[1], 4)) for h, v in d.items()}
+              for m, d in acc.items()}
     out = {"version": VERSION, "fit_sessions": [str(panel.dates[first].date()), str(panel.dates[last - 1].date())],
            "every_nth_session": step, "note": "p_beat = 0.5 + slope * (rank_pct - 0.5); random is fixed at 0",
            "slopes": slopes}
-    predict.CALIBRATION.parent.mkdir(exist_ok=True)
-    predict.CALIBRATION.write_text(json.dumps(out, indent=2))
+    path = predict.CHALLENGER_CALIBRATION if challengers else predict.CALIBRATION
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(json.dumps(out, indent=2))
     return out
 
 
@@ -68,18 +86,27 @@ def replay(panel: Panel, out: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     for p in (preds_path, scores_path):
         p.unlink(missing_ok=True)
     slopes = predict.load_calibration()
-    frames, done = {}, set()
+    bm, ref = research_notices(), champion.DEFAULT_STATE["reference"]
+    frames, done, scored = {}, set(), [pd.DataFrame(columns=score.SCORE_COLUMNS)]
+    weight_rows = []
     for i in range(start, end + 1):
         created = datetime.combine(panel.dates[i].date(), time(20, 30), tzinfo=config.IST)
         predict.assert_fresh(panel.dates[i], created)
-        df = predict.make_predictions(panel, i, created, f"rehearsal-{panel.dates[i]:%Y%m%d}", "rehearsal", slopes)
+        set_notices(panel, bm, i)
+        # tonight's scoring step comes first, as in the live run: only what has matured by tonight
+        if frames:
+            recent = pd.concat([frames[j] for j in range(max(start, i - max(HORIZONS) - 2), i)])
+            new = score.score_matured(panel, recent, done, upto=i, ref_model=ref)
+            score.append_scores(new, scores_path)
+            done |= set(zip(new.asof_date, new.model, new.horizon))
+            scored.append(new)
+        key = panel.dates[i].strftime("%Y-%m-%d")
+        w, ev = ensemble.weights_from_scores(pd.concat(scored, ignore_index=True), key)
+        weight_rows.append({"asof_date": key, **w})
+        df = predict.make_predictions(panel, i, created, f"rehearsal-{panel.dates[i]:%Y%m%d}", "rehearsal", slopes, weights=w)
         predict.append_predictions(df, preds_path)
         frames[i] = df
-        # tonight's scoring step: only what has matured using sessions up to tonight
-        recent = pd.concat([frames[j] for j in range(max(start, i - max(HORIZONS) - 2), i + 1)])
-        new = score.score_matured(panel, recent, done, upto=i)
-        score.append_scores(new, scores_path)
-        done |= set(zip(new.asof_date, new.model, new.horizon))
+    pd.DataFrame(weight_rows).to_csv(out / "ensemble_weights.csv", index=False)
     return pd.read_csv(preds_path), pd.read_csv(scores_path)
 
 
@@ -96,7 +123,9 @@ def check_truncated_rebuild(panel: Panel, preds: pd.DataFrame, n_dates: int) -> 
             build(end=d.date(), out_dir=tmp)
             small = Panel.load(tmp)
             assert small.dates[-1] == d
-            a = predict.make_predictions(small, len(small.dates) - 1, datetime.now(config.IST), "x", "x")
+            set_notices(small, research_notices(), len(small.dates) - 1)
+            w = pd.read_csv(OUT / "ensemble_weights.csv").set_index("asof_date").loc[d.strftime("%Y-%m-%d")].to_dict()
+            a = predict.make_predictions(small, len(small.dates) - 1, datetime.now(config.IST), "x", "x", weights=w)
             b = preds[preds.asof_date == d.strftime("%Y-%m-%d")]
             m = a.merge(b, on=["model", "symbol"], how="outer", suffixes=("_trunc", "_replay"), indicator=True)
             for model, mm in m.groupby("model"):
@@ -116,12 +145,16 @@ def check_poisoned_future(panel: Panel, preds: pd.DataFrame, n_dates: int = 3) -
     """Overwrite every row after day D with garbage; predictions for D must not move."""
     start, end = window(panel)
     ok = True
+    bm, weights = research_notices(), pd.read_csv(OUT / "ensemble_weights.csv").set_index("asof_date")
     for i in np.linspace(start + 5, end - 30, n_dates).astype(int):
         saved = [a[i + 1:].copy() for a in (panel.ret_cc, panel.ret_on, panel.ret_id, panel.traded)]
         try:
             panel.ret_cc[i + 1:], panel.ret_on[i + 1:], panel.ret_id[i + 1:] = 7.0, 7.0, 7.0
             panel.traded[i + 1:] = False
-            a = predict.make_predictions(panel, i, datetime.now(config.IST), "x", "x")
+            if bm is not None:                 # the whole notice table, future rows included: the view must cut it
+                panel.tables["board_meetings"] = bm[bm.known > panel.dates[i] - pd.Timedelta(days=notices.LOOKBACK_DAYS)]
+            a = predict.make_predictions(panel, i, datetime.now(config.IST), "x", "x",
+                                         weights=weights.loc[panel.dates[i].strftime("%Y-%m-%d")].to_dict())
         finally:
             for arr, s in zip((panel.ret_cc, panel.ret_on, panel.ret_id, panel.traded), saved):
                 arr[i + 1:] = s
@@ -141,7 +174,11 @@ def run(n_rebuild_checks: int = 3) -> dict:
 
     sessions = [d.strftime("%Y-%m-%d") for d in panel.dates[start: end + 1]]
     per_day = preds.groupby(["asof_date", "model"]).size().unstack()
-    expected_scores = sum(max(0, len(sessions) - 1 - h) for h in HORIZONS) * len(MODELS)
+    steady = [m for m in per_day.columns if ROLES[m] != "challenger"]
+    shadow = [m for m in per_day.columns if ROLES[m] == "challenger"]
+    pos = {d: k for k, d in enumerate(sessions)}
+    expected_scores = sum(int(pos[d] + 1 + h <= len(sessions) - 1) for d in preds.drop_duplicates(["asof_date", "model"]).asof_date
+                          for h in HORIZONS)
     rnd = summ[summ.model == "random"]
     try:
         predict.append_predictions(preds[preds.asof_date == sessions[0]], OUT / "predictions.csv")
@@ -151,8 +188,9 @@ def run(n_rebuild_checks: int = 3) -> dict:
     rebuild = check_truncated_rebuild(panel, preds, n_rebuild_checks) if n_rebuild_checks else []
 
     checks = {
-        "every session has predictions from every model": bool(per_day.reindex(sessions).notna().all().all()),
-        "about 500 names ranked per model per day": bool(per_day.min().min() >= 450 and per_day.max().max() <= 500),
+        "every session has predictions from the control and every baseline": bool(per_day[steady].reindex(sessions).notna().all().all()),
+        "about 500 names ranked per baseline per day": bool(per_day[steady].min().min() >= 450 and per_day.max().max() <= 500),
+        "a challenger never ranks fewer than 100 names": bool(not shadow or per_day[shadow].min().min() >= 100),
         "no duplicate (date, model, symbol) rows": not bool(preds.duplicated(["asof_date", "model", "symbol"]).any()),
         "every matured target was scored, none early": len(scores) == expected_scores,
         "scores never used a session after the run date": bool((scores.scored_through <= sessions[-1]).all()),
@@ -178,6 +216,13 @@ def run(n_rebuild_checks: int = 3) -> dict:
         "## Plumbing numbers (not evidence)", "",
         "### Rank IC", "", report.ic_table(scores), "",
         "### Simulated portfolios after costs", "", report.sim_table(sims), "",
+        "### Challenger comparison as the scoreboard would show it", "",
+        report.challenger_section({**champion.DEFAULT_STATE, "ever_compared": shadow},
+                                  champion.compare(scores, {**champion.DEFAULT_STATE, "ever_compared": shadow}, shadow), None),
+        "### Decay monitor as the scoreboard would show it", "",
+        report.decay_section(monitor.decay_table(scores), {}), "",
+        "### Sessions on which a challenger was silent", "",
+        report._fmt(pd.DataFrame([{"model": m, "silent_sessions": int(per_day[m].reindex(sessions).isna().sum())} for m in shadow])) if shadow else "_none_", "",
         "### Calibration at 5 sessions: predicted vs realised chance of beating the median", "",
         report._fmt(cal, dec={"p_mean": 3, "beat_rate": 3}) if len(cal) else "_none_", "",
         "### IC standard deviation, for forward planning", "",
@@ -190,10 +235,11 @@ def run(n_rebuild_checks: int = 3) -> dict:
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
     ap.add_argument("--calibrate", action="store_true", help="fit and freeze the baselines' probability slopes")
+    ap.add_argument("--calibrate-challengers", action="store_true", help="fit and freeze the challengers' probability slopes")
     ap.add_argument("--rebuild-checks", type=int, default=3)
     a = ap.parse_args()
-    if a.calibrate:
-        print(json.dumps(calibrate(Panel.load()), indent=2))
+    if a.calibrate or a.calibrate_challengers:
+        print(json.dumps(calibrate(Panel.load(), challengers=a.calibrate_challengers), indent=2))
     else:
         r = run(a.rebuild_checks)
         print(json.dumps(r, indent=2))

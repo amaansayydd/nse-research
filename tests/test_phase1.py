@@ -47,7 +47,7 @@ def test_predictions_do_not_change_when_the_future_changes():
     panel.traded[i + 1:] = False
     b = predict.make_predictions(panel, i, NOW, "r", "c")
     pd.testing.assert_frame_equal(a, b)
-    assert set(a.model) == set(models.MODELS) and a.groupby("model").size().eq(40).all()
+    assert set(a.model) == {"random", "mom_12_1", "rev_5"} and a.groupby("model").size().eq(40).all()
 
 
 def test_view_stops_at_asof():

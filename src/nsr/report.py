@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from .models import MODELS
+from .models import ALL_MODELS, ROLES
 from .panel import Panel
 from .score import summarize
 from .sim import buy_and_hold, performance, simulate
@@ -52,7 +52,8 @@ def run_sims(panel: Panel, preds: pd.DataFrame, start: int, end: int) -> pd.Data
         r = panel.bench.get(col, pd.Series(dtype=float)).iloc[start + 1: end + 1]
         if len(r):
             rows.append({"portfolio": name, "hold": "-", **performance(buy_and_hold(r, CAPITAL), CAPITAL)})
-    for model in MODELS:
+    logged = set(preds.model.unique())
+    for model in (m for m in ALL_MODELS if m in logged):
         picks = picks_from_preds(panel, preds, model)
         for h in SIM_HORIZONS:
             res = simulate(panel, picks, start, end, h, N_NAMES, CAPITAL)
@@ -83,7 +84,7 @@ def ic_table(scores: pd.DataFrame) -> str:
         return "_no matured predictions yet_\n"
     s = s.rename(columns={"days_for_t2_at_this_ic": "days needed for t=2"})
     return _fmt(s, pct=("top_excess_mean", "top_hit"),
-                dec={"ic_mean": 4, "ic_sd": 4, "ic_t": 2, "brier": 4, "days needed for t=2": 0})
+                dec={"ic_mean": 4, "ic_sd": 4, "ic_t": 2, "brier": 4, "ic_ex_ref_mean": 4, "days needed for t=2": 0})
 
 
 def sim_table(sims: pd.DataFrame) -> str:
@@ -93,7 +94,48 @@ def sim_table(sims: pd.DataFrame) -> str:
     return _fmt(sims, pct=pct, dec={"turnover_per_year": 1, "unfilled_buys": 1, "blocked_sells": 1, "writeoffs": 1})
 
 
-def write_scoreboard(path: Path, scores: pd.DataFrame, sims: pd.DataFrame, n_pred_days: int, updated: str) -> None:
+def challenger_section(state: dict | None, comparison: pd.DataFrame | None, weights: dict | None) -> str:
+    if state is None:
+        return ""
+    champ = state["champion"] or "none (seat empty)"
+    out = f"""## Champion and challengers
+
+Champion: **{champ}**. Reference to beat: `{state["reference"]}`. Challengers ever started: {len(state["ever_compared"])}.
+A challenger is judged only at 250, 375, 500 ... scored sessions at the 20-session horizon. `ic_beyond_reference`
+is its rank IC after the reference's ranks are removed; its t-stat must reach `required_t`, which rises
+with every challenger ever started. Meeting the rule earns a holdout check by the owner, not a promotion.
+
+"""
+    if comparison is None or comparison.empty:
+        out += "_no challenger has a matured 20-session score yet_\n"
+    else:
+        out += _fmt(comparison, pct=("top_decile_excess",),
+                    dec={"ic": 4, "ic_t": 2, "reference_ic": 4, "ic_beyond_reference": 4, "beyond_t": 2, "required_t": 2})
+    if weights:
+        out += "\nEnsemble weights for the latest prediction: " + ", ".join(f"`{k}` {v:.3f}" for k, v in weights.items()) + \
+               ". They start equal and move only on matured forward 20-session ICs.\n"
+    return out + "\n"
+
+
+def decay_section(decay: pd.DataFrame | None, retire: dict | None) -> str:
+    if decay is None or decay.empty:
+        return ""
+    d = decay.copy()
+    d["retire_rule_met"] = d.model.map(lambda m: "YES" if (retire or {}).get(m) and ROLES.get(m) == "challenger" else "")
+    return f"""## Decay monitor
+
+One-sided CUSUM on each model's forward rank IC, sampled every h sessions. `expected_ic` is half the
+backtest IC; an alarm means the IC has run below that for long enough to look like a change, and
+gives the estimated start. `sessions_to_detect_total_loss` is how long an edge that vanished today
+would take to raise the alarm: weak signals decay quietly.
+
+{_fmt(d, dec={"expected_ic": 4, "forward_ic": 4, "cusum": 2, "alarm_at": 2, "sessions_to_detect_total_loss": 0})}
+"""
+
+
+def write_scoreboard(path: Path, scores: pd.DataFrame, sims: pd.DataFrame, n_pred_days: int, updated: str,
+                     state: dict | None = None, comparison: pd.DataFrame | None = None,
+                     decay: pd.DataFrame | None = None, retire: dict | None = None, weights: dict | None = None) -> None:
     text = f"""# Scoreboard (forward-only)
 
 Updated {updated}. Prediction days logged: {n_pred_days}. Days with a matured score: {scores.asof_date.nunique() if len(scores) else 0}.
@@ -109,7 +151,8 @@ yet. `days needed for t=2` assumes the IC measured so far is the true IC, which 
 
 {ic_table(scores)}
 `top_excess_mean`: top-decile mean return minus the universe mean, before costs. `top_hit`: share of
-top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores.
+top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores. `ic_ex_ref_mean`:
+rank IC left after the reference model's ranks are removed.
 
 ## Simulated long-only portfolios after costs
 
@@ -119,5 +162,6 @@ full delivery charges, no fill at a locked band. Averaged over every possible st
 {sim_table(sims)}
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
+
 """
-    path.write_text(text)
+    path.write_text(text + challenger_section(state, comparison, weights) + decay_section(decay, retire))

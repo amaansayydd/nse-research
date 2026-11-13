@@ -13,32 +13,11 @@ from datetime import date
 import pandas as pd
 
 from .. import config, parse
+from ..notices import BM as _BM, MAX_TEXT, member as _member, split_records   # one parser for backtest and live
 from .data import TEXT_DIR
 
 _AN = re.compile(r"^(.{2,150}?)\s{2,}([A-Z0-9&\-\.\*]{1,12})\s*: (.*)$")
-_BM = re.compile(r"^(.{2,150}?)\s{2,}([A-Z0-9&\-\.\*]{1,12})\s*: (\d{2}-[A-Za-z]{3}-\d{4}) : (.*)$")
 _SKIP = re.compile(r"^\s*Declaration of NAV", re.I)
-MAX_TEXT = 700
-
-
-def _member(zf, prefix: str) -> str | None:
-    for n in zf.namelist():
-        base = n.rsplit("/", 1)[-1].lower()
-        if base.startswith(prefix) and base.endswith(".txt"):
-            return zf.read(n).decode("latin-1")
-    return None
-
-
-def split_records(raw: str, pattern: re.Pattern) -> list[tuple]:
-    """A record starts on a line shaped like 'Company Name    SYMBOL : ...'; other lines continue it."""
-    out: list[list] = []
-    for line in raw.splitlines()[1:]:
-        m = pattern.match(line)
-        if m:
-            out.append(list(m.groups()[1:]))
-        elif out and line.strip():
-            out[-1][-1] += " " + line.strip()
-    return [tuple(r) for r in out]
 
 
 def parse_day(d: date) -> tuple[list[tuple], list[tuple]]:

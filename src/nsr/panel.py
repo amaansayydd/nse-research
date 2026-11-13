@@ -14,6 +14,8 @@ import pandas as pd
 from . import config
 from .universe import members_asof
 
+SYMBOL_LOOKBACK = 400   # sessions of ticker history a model may see
+
 
 @dataclass
 class Panel:
@@ -28,6 +30,7 @@ class Panel:
     symbols: pd.Series      # (date, sid) -> symbol
     uni: pd.DataFrame
     bench: pd.DataFrame     # date-indexed daily returns of benchmarks
+    tables: dict = field(default_factory=dict)   # event tables with a `known` date column (e.g. board_meetings)
     _o2o: np.ndarray | None = field(default=None, repr=False)
 
     # ------------------------------------------------------------ loading
@@ -95,7 +98,11 @@ class Panel:
         on = self.symbols_on(i)
         keys = np.full(len(self.sids), "", dtype=object)
         keys[self.col(on.index.to_numpy())] = on.to_numpy()
-        return View(self.dates[: i + 1], self.ret_cc[: i + 1], self.ret_id[: i + 1], self.traded[: i + 1], keys)
+        asof = self.dates[i]
+        return View(self.dates[: i + 1], self.ret_cc[: i + 1], self.ret_id[: i + 1], self.traded[: i + 1], keys,
+                    sids=self.sids, uni=self.uni[self.uni.rebalance_date <= asof],
+                    symbols=self.symbols.loc[self.dates[max(0, i - SYMBOL_LOOKBACK)]: asof],
+                    tables={k: t[t.known <= asof] for k, t in self.tables.items()})
 
     # ------------------------------------------------- realised open-to-open
     @property
@@ -125,7 +132,33 @@ class View:
     ret_id: np.ndarray
     traded: np.ndarray
     keys: np.ndarray        # ticker on the as-of session per column ("" if it did not trade)
+    sids: np.ndarray | None = None          # security id per column
+    uni: pd.DataFrame | None = None         # universe rebalances decided on or before the as-of session
+    symbols: pd.Series | None = None        # (date, sid) -> ticker for recent sessions up to the as-of session
+    tables: dict = field(default_factory=dict)   # event tables, rows known by the as-of session only
 
     @property
     def asof(self) -> pd.Timestamp:
         return self.dates[-1]
+
+    def member_mask(self, row: int) -> np.ndarray:
+        """Universe membership per column for a prediction made on session `row`."""
+        m = np.zeros(self.ret_cc.shape[1], dtype=bool)
+        sid = members_asof(self.uni, self.dates[row]).sid.to_numpy()
+        m[np.searchsorted(self.sids, sid)] = True
+        return m
+
+    def symbol_columns(self, when: pd.Series, tickers: pd.Series, lookback: int = 5) -> np.ndarray:
+        """Column for each (date, ticker): the security that carried the ticker on the last session
+        at or before the date, or on one of the `lookback` sessions before that. -1 if unknown."""
+        sym = self.symbols.reset_index()
+        sym["i"] = self.dates.get_indexer(sym.date)
+        q = pd.DataFrame({"i": np.searchsorted(self.dates, pd.to_datetime(when).to_numpy(), side="right") - 1,
+                          "symbol": np.asarray(tickers), "row": np.arange(len(when))})
+        q = q[q.i >= 0].sort_values("i")
+        m = pd.merge_asof(q, sym[["i", "symbol", "sid"]].sort_values("i"), on="i", by="symbol",
+                          direction="backward", tolerance=lookback)
+        out = np.full(len(when), -1, dtype=np.int64)
+        ok = m.sid.notna().to_numpy()
+        out[m.row.to_numpy()[ok]] = np.searchsorted(self.sids, m.sid.to_numpy()[ok].astype(np.int64))
+        return out
