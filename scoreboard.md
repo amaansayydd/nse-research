@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-13 10:21 IST. Prediction days logged: 1. Days with a matured score: 0.
+Updated 2026-11-13 11:15 IST. Prediction days logged: 1. Days with a matured score: 0.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -20,7 +20,9 @@ rank IC left after the reference model's ranks are removed.
 ## Simulated long-only portfolios after costs
 
 Top 20 names, Rs 1,000,000 paper capital, trades at the next open with 10 bps slippage a side,
-full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax.
+full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax, except
+`after_tax_total_return`: capital-gains tax paid each financial year (20% short-term, 12.5% long-term above
+Rs 1.25 lakh, 4% cess) and the book sold at the end. NIFTYBEES is bought once, held and sold the same way.
 
 _not enough sessions to simulate yet_
 
@@ -62,4 +64,16 @@ would take to raise the alarm: weak signals decay quietly.
 | ens_mom_ear | 1 | 0.0077 | 0 |  | 0.00 | 38.71 | ok | 763 |  |
 | ens_mom_ear | 5 | 0.0179 | 0 |  | 0.00 | 18.07 | ok | 949 |  |
 | ens_mom_ear | 20 | 0.0285 | 0 |  | 0.00 | 9.65 | ok | 1347 |  |
+
+## Graduation (Phase 4)
+
+Graduation is the point at which real capital may be considered. It needs every criterion below on
+the forward record, and then the owner's explicit decision. Criteria were fixed on 2026-11-13.
+
+There is no champion, so nothing can graduate. Where each challenger stands on the criteria that can already be measured:
+
+| model | scored_sessions | ic_20 | ic_t | t_needed | ic_5 |
+|---|---|---|---|---|---|
+| ear_drift_60 | 0 of 500 |  |  | 2.0 |  |
+| ens_mom_ear | 0 of 500 |  |  | 2.0 |  |
 
