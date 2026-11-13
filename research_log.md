@@ -537,7 +537,8 @@ Result         : PASS (tested 2026-11-13, 5 hypotheses registered, required t 3.
                  (5) Only the pooled definition clears t = 3: promoters alone 2.3, directors and
                  managers alone 2.3, no cooldown 1.7. The margin over the bar is thin (3.42).
                  (6) Buys after a fall do worse than buys after a rise, against the contrarian
-                 story in the literature. (7) First half of 2020: -1.5%.
+                 story in the literature. (7) First half of 2020: -1.5%; the second halves of 2024
+                 and 2025 are also negative (-0.6%, -0.3%) on about 30 events each.
                  Post-hoc attacks (not pre-registered, `research/results/T-0005_posthoc.json`):
                  insider market sales through the same filters give -0.34% (t -1.4) and share
                  grants -0.28% (t -0.8), so there is no generic "a filing appeared" effect; 90% of
