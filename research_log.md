@@ -359,6 +359,11 @@ Weak points of the rule:
   seat (in sample): 15.1% a year after tax against NIFTYBEES 15.1% and `MOM30IETF` 14.4%. Not met, as
   under v1.
 - The scoreboard of 2026-11-14 20:30 shows 2 prediction days and 0 days with a matured score.
+- Release c08cf6f deployed 2026-11-14 20:43 (156 tests pass on the copy). Dry run of the deployed
+  release in the job's environment: random 500, rev_5 500, ens_mom_ear 498, mom_12_1 489,
+  ear_drift_60 465, observed would flag 0. The same counts as the live run of 2026-11-13.
+- Not verified: the new wording on the live scoreboard (first written by the 22:30 run of 2026-11-14),
+  and the G5 row on live data, which appears only when there is a champion.
 
 ## Trials
 
