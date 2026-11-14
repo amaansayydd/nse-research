@@ -210,7 +210,7 @@ bought once, held and sold the same way, at a stock's charges, which slightly ov
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
 that leans on momentum must also beat `MOM30IETF`: a fund that follows a published momentum rule and is
 taxed only when sold. Fund rows use the fund's own closing price, which can stray from its holdings' value
-on a thin day. Graduation does not test against the momentum funds yet (criteria v1).
+on a thin day. Graduation criterion G5 is tested against the better of NIFTYBEES and `MOM30IETF` (criteria v1.1).
 
 """
     path.write_text(text + challenger_section(state, comparison, weights) + observed + decay_section(decay, retire) + graduation)

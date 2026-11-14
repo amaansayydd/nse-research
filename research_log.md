@@ -231,6 +231,9 @@ failure can no longer fail a run, and the dry run prints what every model would 
 
 ## Phase 4 graduation criteria v1 (frozen 2026-11-13, before any forward score exists)
 
+> G5 was tightened by v1.1 on 2026-11-14 (next section but one: "Phase 4 graduation criteria v1.1").
+> Everything else in this section is in force unchanged.
+
 Graduation is the point at which the owner may *consider* real capital. It decides nothing by
 itself: real capital always needs the owner's explicit decision. Only the forward record counts.
 Tax and regulation were checked on 2026-11-13 (sources in `live_trading.md`).
@@ -297,6 +300,65 @@ for NIFTYBEES after tax, with a 29% drawdown against the 25% limit and an IC t o
 two years `ear_drift_60`'s top 20 made 40.0% before tax and 30.8% after, against 31.7% for
 NIFTYBEES after tax. The bar is real: on recent in-sample data the best candidates do not clear it.
 Adding the tax bookkeeping left every pre-tax number in the rehearsal unchanged.
+
+## Phase 4 graduation criteria v1.1 (approved by the owner and frozen 2026-11-14, before any forward score exists)
+
+The owner typed APPROVE on the draft below ("Momentum funds on the scoreboard", last subsection). One
+criterion changes. G1 to G4 and G6 to G9 are exactly as in v1.
+
+| # | Criterion | Requirement |
+|---|---|---|
+| G5 | Against the better fund after costs and taxes | Paper portfolio (top 20, 20-session hold, Rs 10 lakh, all charges and slippage), with capital-gains tax paid each financial year and the book liquidated at the end, must beat **the better of NIFTYBEES and MOM30IETF**, each bought, held and liquidated the same way, by at least 3 percentage points a year |
+
+State of the record at freezing: two forward sessions (2026-11-12 and 2026-11-13), no matured forward
+score, no champion, and no forward return of either fund read by anyone (the production checks of
+2026-11-14 printed row counts and hashes only).
+
+### Clarifications at freezing (2026-11-14, before the code ran live)
+
+- **"Better"** is the fund with the higher annualised after-tax return over the model's own forward
+  window. Both are bought at the start of that window, held, and sold at its end, at a stock's
+  charges (which overstates a fund's cost by about 0.2% once, in the model's favour).
+- **A fund series with gaps is not a hurdle.** A session without a fund return is spent in cash, which
+  would lower the hurdle without anyone noticing (a second ticker change would do exactly that).
+  `MOM30IETF` must have a return on at least 95% of the sessions in the window, the same share G8 asks
+  of the model. Below that, G5 is **not met** and the scoreboard says why, until the series is repaired
+  (a new ticker is added to `build.EXTRA_BENCHMARKS`).
+- **If the fund is wound up or merged**, G5 cannot be met until the owner approves a new version
+  naming a replacement. The code never falls back to NIFTYBEES alone.
+- **G2 and G7 still use NIFTYBEES** for the market fall and the drawdown limit. The momentum fund is a
+  return hurdle only; it falls further than the market, and using it in G7 would loosen that limit.
+- **Phase 3 is untouched.** Reference `mom_12_1`, N = 2, required t 2.24, slots 2 of 3, observation
+  tier M = 1.
+- **`MOMENTUM50` is not part of any criterion.** It stays on the scoreboard for information.
+
+### What this does to the bar (in sample, not evidence)
+
+On the dress rehearsal (496 sessions to 2025-11-11) the better fund was NIFTYBEES, by about 0.6 points
+a year after tax, so v1.1 would have changed no verdict there. It bites in a window where momentum
+beats the Nifty: before tax the fund made 40.4% in 2023 and 20.5% in 2024, against 21.0% and 10.4%
+for NIFTYBEES. In such a window a momentum-based model that merely matched the fund would have passed G5 under v1 and fails it under v1.1.
+
+Weak points of the rule:
+
+- The fund's close is a traded price, not the value of its holdings. Over a two-year window the
+  difference is small (the fund tracked its index within about 1 point a year), but it is not zero.
+- The fund pays almost no tax until sold. A model that trades monthly pays 20% a year on its gains.
+  Under v1.1 a momentum-based model needs roughly 3 points, plus its whole tax and cost drag, of
+  stock-picking skill over the index rule. That is deliberate, and it may be a bar no model here meets.
+- One index rule is named. A different momentum fund could do better or worse than `MOM30IETF`; the
+  choice was made on research-window trading volume before any forward return was looked at.
+
+### Verification before go-live (2026-11-14)
+
+- 156 tests pass. New assertions: a book that beats NIFTYBEES by 11 points and the fund by 2 fails G5;
+  a fund series with a return on 90% of sessions fails G5 and nothing else; a book with no fund series
+  fails G5; adding the fund to a panel changes no other number in the book.
+- Dress rehearsal: 15 of 15 checks pass. `rehearsal/REPORT.md` differs from the previous report in the
+  G5 row and the section's first paragraph, and nowhere else. The G5 row, as if `ens_mom_ear` held the
+  seat (in sample): 15.1% a year after tax against NIFTYBEES 15.1% and `MOM30IETF` 14.4%. Not met, as
+  under v1.
+- The scoreboard of 2026-11-14 20:30 shows 2 prediction days and 0 days with a matured score.
 
 ## Trials
 
@@ -976,7 +1038,9 @@ Totals over the two years. `MOMENTUM50` listed inside the window and has no row.
   buy momentum, not the best possible momentum portfolio.
 - The fund series starts in August 2022, so no long backtest against it is possible.
 
-### Draft, not in force: graduation criteria v1.1 (needs the owner's APPROVE)
+### Draft of graduation criteria v1.1 (approved by the owner 2026-11-14; the frozen text is "Phase 4 graduation criteria v1.1" above)
+
+The draft as the owner saw it, kept for the record.
 
 One change. G5 would read: the paper portfolio after tax must beat **the better of NIFTYBEES and
 MOM30IETF**, each bought, held and liquidated the same way, by at least 3 percentage points a year.

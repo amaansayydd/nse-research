@@ -1,4 +1,4 @@
-"""Graduation tracker (research_log.md, Phase 4 graduation criteria v1).
+"""Graduation tracker (research_log.md, Phase 4 graduation criteria v1.1).
 
 Graduation is the point at which the owner may consider real capital. This module
 only measures the forward record against criteria fixed in advance. It never
@@ -21,9 +21,11 @@ H = 20                                   # decision horizon and holding period
 MIN_SESSIONS, MIN_SESSIONS_CALM, MIN_AS_CHAMPION = 500, 750, 250
 MARKET_FALL = 0.10                       # the window should contain a fall this deep in NIFTYBEES
 MIN_IC, MIN_T = 0.02, 2.0
-MARGIN = 0.03                            # after-tax return over NIFTYBEES, per year
+MARGIN = 0.03                            # after-tax return over the better fund, per year
+MOMENTUM_FUND = "MOM30IETF"              # v1.1: G5 is against the better of NIFTYBEES and this fund
 DD_FLOOR, DD_MULT, REL_DD = 0.25, 1.5, 0.15
 MIN_COVERAGE, VOID_FREE = 0.95, 250
+G5 = "G5 against the better fund after costs and taxes"
 
 
 def max_drawdown(curve) -> float:
@@ -52,12 +54,17 @@ def book(panel: Panel, preds: pd.DataFrame, model: str) -> dict | None:
     r = panel.bench["NIFTYBEES"].iloc[start + 1: end + 1]
     n = len(r)
     nifty = buy_and_hold_after_tax(r, cap, CostModel(), TaxModel())
+    # The momentum fund over the same window. A session without a return is spent in cash, which would
+    # lower the hurdle unseen, so the share of sessions that have one is carried along and G5 checks it.
+    fund_r = panel.bench[MOMENTUM_FUND].iloc[start + 1: end + 1] if MOMENTUM_FUND in panel.bench else pd.Series(np.nan, index=r.index)
+    fund = buy_and_hold_after_tax(fund_r, cap, CostModel(), TaxModel()) if fund_r.notna().any() else float("nan")
     return {
         "sessions": n,
         "coverage": len(idx) / (end - start + 1),
         "after_tax": _annual(cap * (1 + res.stats["after_tax_total_return"]), cap, n),
         "after_tax_if_business_income": _annual(cap * (1 + biz.stats["after_tax_total_return"]), cap, n),
         "nifty_after_tax": _annual(nifty, cap, n),
+        "momentum_fund_after_tax": _annual(fund, cap, n), "momentum_fund_coverage": float(fund_r.notna().mean()) if n else 0.0,
         "pre_tax": _annual(float(res.equity.iloc[-1]), cap, n),
         "universe_pre_tax": _annual(float(hurdle.equity.iloc[-1]), cap, n),
         "drawdown": max_drawdown(res.equity), "nifty_drawdown": max_drawdown(buy_and_hold(r, cap)),
@@ -92,6 +99,12 @@ def evaluate(model: str, scores: pd.DataFrame, state: dict, bk: dict | None, dec
     need = MIN_SESSIONS if fell else MIN_SESSIONS_CALM
     dd_limit = -max(DD_FLOOR, DD_MULT * abs(b.get("nifty_drawdown", 0.0)))
     pct = lambda v: "" if v is None or not np.isfinite(v) else f"{v * 100:.1f}%"
+    # G5 (v1.1): the hurdle is the better of the two funds. A momentum fund series with gaps cannot be
+    # trusted as a hurdle, and then G5 is not met until the series is repaired.
+    fund_cov = b.get("momentum_fund_coverage", 0.0)
+    fund_ok = fund_cov >= MIN_COVERAGE and np.isfinite(b.get("momentum_fund_after_tax", float("nan")))
+    best_fund = max(b.get("nifty_after_tax", float("nan")), b["momentum_fund_after_tax"]) if fund_ok else float("nan")
+    fund_note = "" if fund_ok or not b else f"; {MOMENTUM_FUND} HAS A RETURN ON ONLY {fund_cov:.0%} OF SESSIONS"
     num = lambda v, d=4: "" if v is None or not np.isfinite(v) else f"{v:.{d}f}"
     rows = [
         ("G1 standing", f"champion for {MIN_AS_CHAMPION} scored sessions, not decaying",
@@ -102,9 +115,10 @@ def evaluate(model: str, scores: pd.DataFrame, state: dict, bk: dict | None, dec
         ("G3 IC", f"20-session IC at least {MIN_IC}, 5-session IC positive",
          f"{num(ic['ic'])} and {num(ic['ic_5'])}", ic["ic"] >= MIN_IC and ic["ic_5"] > 0),
         ("G4 t-stat", f"t of the 20-session IC at least {MIN_T}", num(ic["t"], 2), ic["t"] >= MIN_T),
-        ("G5 against Nifty after costs and taxes", f"at least {MARGIN:.0%} a year over NIFTYBEES, both after tax",
-         f"{pct(b.get('after_tax'))} against {pct(b.get('nifty_after_tax'))} (if taxed as business income: {pct(b.get('after_tax_if_business_income'))})",
-         b.get("after_tax", float("nan")) >= b.get("nifty_after_tax", float("nan")) + MARGIN),
+        (G5, f"at least {MARGIN:.0%} a year over the better of NIFTYBEES and {MOMENTUM_FUND}, all after tax",
+         f"{pct(b.get('after_tax'))} against NIFTYBEES {pct(b.get('nifty_after_tax'))} and {MOMENTUM_FUND} "
+         f"{pct(b.get('momentum_fund_after_tax'))} (if taxed as business income: {pct(b.get('after_tax_if_business_income'))}){fund_note}",
+         b.get("after_tax", float("nan")) >= best_fund + MARGIN),
         ("G6 against the universe", "beats the universe held after costs, before tax",
          f"{pct(b.get('pre_tax'))} against {pct(b.get('universe_pre_tax'))}",
          b.get("pre_tax", float("nan")) > b.get("universe_pre_tax", float("nan"))),
@@ -126,7 +140,8 @@ def section(panel: Panel, preds: pd.DataFrame, scores: pd.DataFrame, state: dict
     head = """## Graduation (Phase 4)
 
 Graduation is the point at which real capital may be considered. It needs every criterion below on
-the forward record, and then the owner's explicit decision. Criteria were fixed on 2026-11-13.
+the forward record, and then the owner's explicit decision. Criteria v1.1: fixed on 2026-11-13, and G5
+tightened on 2026-11-14 to the better of NIFTYBEES and the momentum fund, before any forward score existed.
 
 """
     champ = state.get("champion")

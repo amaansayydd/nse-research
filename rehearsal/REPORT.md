@@ -134,7 +134,8 @@ would take to raise the alarm: weak signals decay quietly.
 ## Graduation (Phase 4)
 
 Graduation is the point at which real capital may be considered. It needs every criterion below on
-the forward record, and then the owner's explicit decision. Criteria were fixed on 2026-11-13.
+the forward record, and then the owner's explicit decision. Criteria v1.1: fixed on 2026-11-13, and G5
+tightened on 2026-11-14 to the better of NIFTYBEES and the momentum fund, before any forward score existed.
 
 Champion `ens_mom_ear`: 2 of 8 measured criteria met.
 
@@ -144,7 +145,7 @@ Champion `ens_mom_ear`: 2 of 8 measured criteria met.
 | G2 duration | 500 scored sessions with a 10% market fall in the window, else 750 | 475 sessions; NIFTYBEES worst fall -15.2% | no |
 | G3 IC | 20-session IC at least 0.02, 5-session IC positive | 0.0121 and 0.0137 | no |
 | G4 t-stat | t of the 20-session IC at least 2.0 | 0.60 | no |
-| G5 against Nifty after costs and taxes | at least 3% a year over NIFTYBEES, both after tax | 15.1% against 15.1% (if taxed as business income: 13.1%) | no |
+| G5 against the better fund after costs and taxes | at least 3% a year over the better of NIFTYBEES and MOM30IETF, all after tax | 15.1% against NIFTYBEES 15.1% and MOM30IETF 14.4% (if taxed as business income: 13.1%) | no |
 | G6 against the universe | beats the universe held after costs, before tax | 19.3% against 15.7% | yes |
 | G7 drawdown | no deeper than -25.0%; no deeper than -15% against the universe | -29.3%; -10.8% against the universe | no |
 | G8 record integrity | predicted on 95% of sessions, control clean, nothing voided in 250 sessions | 100.0% of sessions; control clean; no recent void | yes |

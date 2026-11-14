@@ -74,7 +74,7 @@ def test_simulation_after_tax_never_beats_pre_tax_and_leaves_pre_tax_alone():
 
 # ----------------------------------------------------------------- graduation
 GOOD_BOOK = {"sessions": 760, "coverage": 0.99, "after_tax": 0.22, "after_tax_if_business_income": 0.19,
-             "nifty_after_tax": 0.11, "pre_tax": 0.27, "universe_pre_tax": 0.15, "drawdown": -0.22,
+             "nifty_after_tax": 0.11, "momentum_fund_after_tax": 0.09, "momentum_fund_coverage": 1.0, "pre_tax": 0.27, "universe_pre_tax": 0.15, "drawdown": -0.22,
              "nifty_drawdown": -0.14, "relative_drawdown": -0.09}
 
 
@@ -96,13 +96,19 @@ def test_each_criterion_can_fail_on_its_own():
     assert graduate(calm, days=600)["G2 duration"] == "no" and graduate(calm, days=760)["G2 duration"] == "yes"
     assert graduate(ic=0.01)["G3 IC"] == "no"
     assert graduate(ic=0.021, sd=0.2)["G4 t-stat"] == "no"
-    assert graduate({**GOOD_BOOK, "after_tax": 0.13})["G5 against Nifty after costs and taxes"] == "no"   # only 2 points over
+    assert graduate({**GOOD_BOOK, "after_tax": 0.13})[graduation.G5] == "no"   # only 2 points over
+    assert graduate({**GOOD_BOOK, "momentum_fund_after_tax": 0.20})[graduation.G5] == "no"   # beats Nifty by 11, the fund by 2
+    assert graduate({**GOOD_BOOK, "momentum_fund_after_tax": 0.19})[graduation.G5] == "yes"
+    gaps = graduate({**GOOD_BOOK, "momentum_fund_coverage": 0.9})                 # a fund series with holes is no hurdle
+    assert gaps[graduation.G5] == "no" and gaps.drop([graduation.G5, "G9 owner's checks"]).eq("yes").all()
+    old = {k: v for k, v in GOOD_BOOK.items() if not k.startswith("momentum_fund")}
+    assert graduate(old)[graduation.G5] == "no"                                   # no fund series at all: not met
     assert graduate({**GOOD_BOOK, "pre_tax": 0.14})["G6 against the universe"] == "no"
     assert graduate({**GOOD_BOOK, "drawdown": -0.30})["G7 drawdown"] == "no"
     assert graduate({**GOOD_BOOK, "drawdown": -0.30, "nifty_drawdown": -0.25})["G7 drawdown"] == "yes"   # the market fell too
     assert graduate({**GOOD_BOOK, "relative_drawdown": -0.2})["G7 drawdown"] == "no"
     assert graduate({**GOOD_BOOK, "coverage": 0.9})["G8 record integrity"] == "no"
-    assert graduate(None)[["G5 against Nifty after costs and taxes", "G6 against the universe", "G7 drawdown"]].eq("no").all()
+    assert graduate(None)[[graduation.G5, "G6 against the universe", "G7 drawdown"]].eq("no").all()
 
 
 def test_book_measures_the_models_own_window(tmp_path):
@@ -115,6 +121,13 @@ def test_book_measures_the_models_own_window(tmp_path):
     assert b["after_tax"] < b["pre_tax"] and b["after_tax_if_business_income"] < b["after_tax"]
     assert b["pre_tax"] > b["universe_pre_tax"]                        # momentum finds the planted drift
     assert graduation.book(panel, preds, "no_such_model") is None
+    assert b["momentum_fund_coverage"] == 0.0 and np.isnan(b["momentum_fund_after_tax"])   # no fund in this panel
+    panel.bench[graduation.MOMENTUM_FUND] = 0.0008
+    f = graduation.book(panel, preds, "mom_12_1")
+    assert f["momentum_fund_coverage"] == 1.0 and f["momentum_fund_after_tax"] > f["nifty_after_tax"] == b["nifty_after_tax"]
+    assert {k: v for k, v in f.items() if not k.startswith("momentum_fund")} == {k: v for k, v in b.items() if not k.startswith("momentum_fund")}
+    panel.bench.iloc[260:280, panel.bench.columns.get_loc(graduation.MOMENTUM_FUND)] = np.nan
+    assert graduation.book(panel, preds, "mom_12_1")["momentum_fund_coverage"] == pytest.approx(48 / 68)
 
 
 def test_scoreboard_shows_progress_when_there_is_no_champion_and_the_table_when_there_is(tmp_path):
@@ -129,7 +142,10 @@ def test_scoreboard_shows_progress_when_there_is_no_champion_and_the_table_when_
     assert "0 of 500" in empty
     seat = {**state, "champion": "mom_12_1", "champion_since": "2021-01-01"}
     text = graduation.section(panel, preds, scores, seat, None, [])
-    assert "Champion `mom_12_1`" in text and "G5 against Nifty after costs and taxes" in text and "by hand" in text
+    assert "Champion `mom_12_1`" in text and graduation.G5 in text and "by hand" in text
+    assert "MOM30IETF HAS A RETURN ON ONLY 0% OF SESSIONS" in text            # this panel has no momentum fund
+    panel.bench[graduation.MOMENTUM_FUND] = 0.0006
+    assert "HAS A RETURN ON ONLY" not in graduation.section(panel, preds, scores, seat, None, [])
     out = tmp_path / "sb.md"
     sims = report.run_sims(panel, preds, 240, 319)
     report.write_scoreboard(out, scores, sims, 60, "now", graduation=text)
