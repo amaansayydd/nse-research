@@ -756,12 +756,38 @@ holding cash; (2) the default 20-session horizon was used for T-0007 although it
 at the results, a median of 6 sessions after the notice.
 
 
-## DRAFT for owner approval (2026-11-14). Not in force. Nothing below is registered or deployed
+## DRAFT 2 for owner approval (2026-11-14). Not in force. Nothing below is registered or deployed
 
-Two pieces, to be approved or rejected together: a new trial (T-0008) and the Phase 3 rule it needs.
-If approved, both are frozen as written, T-0008 gets its ledger rows, and only then is code deployed.
+Replaces the first draft (commit 8cb9054), which made T-0008 the third challenger. Two pieces, to
+be approved or rejected together: Phase 3 rules v1.1, which add an observation tier, and T-0008 as
+its first entrant. If approved, both are frozen as written, the ledger rows are added, and only
+then is code deployed. Phase 3 rules v1 stay as they are for challengers and the champion.
 
-### DRAFT T-0008  Early results date, 5-session hold (results_advance_5d)
+### DRAFT Phase 3 rules v1.1: the observation tier
+
+This changes one line of the owner's original brief ("every forward comparison is a trial; the
+threshold rises with challengers ever compared"). Observed signals are counted, but in a family of
+their own, because none of them can take the seat.
+
+| Item | Rule |
+|---|---|
+| Purpose | To start a forward record for a registered signal without giving it a shadow slot. Forward months cannot be recovered later |
+| Who may enter | A signal with a T- registration whose definition is frozen, dense or event. It gets an O- row in `trial_ledger.csv` on the day it starts. At most 10 at a time, so the daily run stays simple |
+| How it runs | Inside the same scheduled run, writing to the same `predictions.csv`. A dense signal writes its ranks; an event signal writes rows only for the names it flags and is silent otherwise. A failure or silence is noted and never stops the baselines or challengers |
+| No decision rights | An observed signal cannot become champion, earns no holdout look, and does not count in N. The margin for challengers is untouched (2.24 today) |
+| Statistic, fixed at entry | Dense: mean rank IC and `ic_ex_ref` at its registered horizon. Event: mean excess per flagged name over the equal-weight universe from the next open over its registered horizon, standard error clustered by calendar month. Voided rows excluded |
+| Label "confirmed forward" | Read only at the usual checkpoints (250, 375, 500, ... scored sessions since its first counted prediction; event signals also need 200 scored events). Needs t at least c(M), the normal quantile at 1 - 0.025/M: 1.96, 2.24, 2.39, 2.58, 2.81 for M = 1, 2, 3, 5, 10. M = signals ever observed, including dropped ones. It never goes down, and a higher M applies to every observed signal at its next checkpoint |
+| Also needed for the label (event signals) | Mean excess minus one round trip under the Phase 1 cost model (0.45% today) above zero, also when entering one session later; `random` shows no skill |
+| What the label earns | The right to be proposed for a use: as a component of a combined model or as an overlay on a book. That use is a new registration and, if it competes for the seat, a challenger with its own F- row |
+| Clock rule | If an observed signal is later made a challenger in its own right, its challenger test uses only sessions after its F- row. The observation record sets expectations; it is never reused as the test |
+| Futility | From 500 scored sessions, t below 0.5 at a checkpoint: dropped from the run with a postmortem in `lessons.md` |
+| Scoreboard | A separate "Observed signals" section with the running numbers. They decide nothing between checkpoints |
+| Voiding, learning, what counts | As in v1 |
+
+Not in this draft: the combined model whose weights would come from observed signals' forward ICs
+(project review, proposal 2). It needs its own backtest and approval.
+
+### DRAFT T-0008  Early results date, 5-session hold (results_advance_5d), first observed signal
 Mechanism      : After the first notice of a results board meeting, mid and small caps rise against
                  the universe until the results and give it back after. The rise is larger when
                  the date is clearly earlier in the quarter than a year before. Why is not
@@ -781,57 +807,43 @@ Design         : The T-0007 event exactly as registered there: first notice of a
 Evidence so far: In sample and post-hoc. The horizon was chosen after T-0007 failed at 20
                  sessions. Backtest numbers (+1.00% per event, t 7.5, +0.54% after costs, all 14
                  years) size the forward test and prove nothing.
-Pass criteria  : Forward only, by the event rule below. There is no backtest verdict.
+Pass criteria  : Forward only: the "confirmed forward" label under rules v1.1. No backtest verdict.
 Falsified if   : The forward mean excess has t below 0.5 after 500 scored sessions, or never
                  clears costs.
 Expected life  : Unknown. The reversal after results says it is not information, so it can
                  vanish as soon as a few traders lean against it.
-Prior          : About 25% to become eligible within three years. More likely than not real
+Prior          : About 30% to earn the label within three years. More likely than not real
                  before costs; less likely than not worth trading after them.
-If it passes   : It cannot hold the champion seat: 150 to 200 one-week positions a year are not a
-                 20-name book. At 5% of the book per position its ceiling is about 1 to 4% a year
-                 on the whole book before tax, less when a results season sends more events than
-                 there are free slots. Its use would be as an overlay on the champion's book,
-                 which is a new design with its own registration.
+If it passes   : Its ceiling as an overlay is about 1 to 4% a year on the whole book before tax
+                 at 5% of the book per position, less when a results season sends more events
+                 than there are free slots. The overlay would be a new design and a new trial.
 
-### DRAFT Phase 3 rules v1.1: event challengers (adds to v1, changes nothing for dense challengers)
-
-| Item | Rule |
-|---|---|
-| What an event challenger is | A signal that flags a few names on some evenings instead of ranking the universe. It writes rows to `predictions.csv` only for flagged names, in the same scheduled run, and is silent otherwise. It can never stop the baselines |
-| Slot and trial count | It takes one of the 3 shadow slots and gets an F- row. N counts it. With T-0008, N becomes 3 and the margin for every challenger, including the two running now, rises from 2.24 to 2.39 |
-| Decision horizon | The horizon in the signal's registration (T-0008: 5 sessions) |
-| Statistic | Mean excess return per flagged name over the equal-weight universe (members that traded), from the next open over the decision horizon. Standard error clustered by calendar month. Voided rows excluded |
-| Minimum | 250 scored sessions since its first counted prediction, and 200 scored events. Nothing is decided earlier |
-| Checkpoints | The same as dense challengers: 250, 375, 500, ... scored sessions, on the events up to the checkpoint |
-| Margin | Clustered t of the mean excess at least c(N) |
-| Also required | Mean excess minus one round trip under the Phase 1 cost model (0.45% today) above zero, also when entering one session later; `random` shows no skill |
-| Reported, not required | The mean after taking off what stocks in the same momentum tenth earned over the same days; hit rate; median; by liquidity bucket |
-| What eligibility earns | The owner's holdout check (one of the 3 looks) and the owner's decision on a use. Never the champion seat directly |
-| Futility | From 500 scored sessions, clustered t below 0.5 at a checkpoint: retired with a postmortem. The slot frees; N does not change |
-| Decay monitor | None while in shadow. One is designed if it is ever put to use |
-| Voiding, learning, what counts | As in v1 |
-
-### What the draft costs and how long it takes
+### What draft 2 costs and how long it takes
 
 | Item | Number |
 |---|---|
-| Events needed for t = 2.39 if the full +1.0% holds | about 290 (noise 6.5% per event, clustering factor 1.09) |
-| The same at +0.7% | about 580 |
-| The same at +0.5% | about 1,140, and it would not clear costs |
+| Shadow slots | 2 of 3 used, unchanged. The third stays free |
+| Margin for the two running challengers | 2.24, unchanged |
+| Bar for T-0008's label | 1.96 while it is the only observed signal; 2.39 once three have ever been observed |
+| Events needed at the 1.96 bar | about 190 if the full +1.0% holds (the 200-event minimum binds), about 390 at +0.7%, about 770 at +0.5% |
+| Events needed at the 2.39 bar | about 290, 580 and 1,140 |
 | Events a year | 129 in 2024, 166 in 2025 to early October; 150 to 200 expected |
-| First checkpoint that could decide | 375 or 500 sessions (1.5 to 2 years) at full strength; 3 to 4 years at +0.7% |
-| Cost to the two running challengers | Margin 2.24 to 2.39: about 14% more sessions. If their backtests hold in full, the deciding checkpoints (500 and 625) do not move |
-| Slots | 3 of 3 used. A stronger later idea would have to wait for a retirement |
+| First checkpoint that could decide | 250 or 375 sessions (1 to 1.5 years) at full strength; 2 to 4 years at +0.7% |
 
-What would be built on approval, before any counted prediction: the event model inside the daily
-run with the notice window extended to 460 days; event rows in the prediction log; an event score
-file and scoreboard section; the checkpoint logic above; a parity check that the live event list
-equals the research one on the research window; tests; a rehearsal replay; then `scripts/deploy.sh`.
+What would be built on approval, before any counted prediction: an "observed" role in the daily
+run; the event model with the notice window extended to 460 days; event rows in the prediction
+log; an event score file; the "Observed signals" scoreboard section and its checkpoint logic; a
+parity check that the live event list equals the research one on the research window; tests; a
+rehearsal replay; then `scripts/deploy.sh`.
 
-Not recommended: spending a holdout look on it now. The holdout year holds about 150 events, which
-would give t near 1.9 even if the full effect is real. The forward record gives the same answer
-within about a year at no cost in looks.
+Weak points of this design, stated now: (1) two error-control families mean a signal can be
+"confirmed forward" at a lower bar than a challenger faces; the label is kept from the seat for
+that reason. (2) Every observed signal is more code in the nightly run; the cap of 10 and the
+isolation rule limit that, they do not remove it. (3) The 0.45% cost figure the label depends on is
+still unverified with a broker.
+
+Not recommended: spending a holdout look on T-0008 now. The holdout year holds about 150 events,
+which would give t near 1.9 even if the full effect is real.
 
 ## Project review (2026-11-14, owner asked how to better the whole project). Proposals, none decided
 
@@ -850,8 +862,8 @@ that an index fund can deliver more cheaply.
 | 7 | Operations: a wake schedule for the run times (none is set), a failure alert to the phone, later a second machine | One missed evening is one lost day of record | Minutes for the wake schedule; the owner must set it |
 | 8 | A registration checklist: horizon taken from the mechanism, backtest and forward power worked out first, covered span stated | T-0007's horizon and T-0006's power were both visible before a trial was spent | None |
 
-Effect on the T-0008 draft above: under proposal 1 it would run in the observation tier. It would
-take no slot and would not raise the margin for the two running challengers.
+Draft 2 above applies proposal 1: T-0008 runs in the observation tier, takes no slot and does not
+raise the margin for the two running challengers.
 
 ### Harness validation (2026-11-12, before any trial was scored)
 
