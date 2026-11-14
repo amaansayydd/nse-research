@@ -19,6 +19,10 @@ goes on the scoreboard: the baselines are known effects and this window was not 
 | random model shows no skill (|t| < 3 at every horizon) | yes |
 | random model Brier is 0.25 | yes |
 | rebuild from raw as of day D reproduces the logged predictions | yes |
+| observed tier: one evaluation logged for every session and signal, no failures | yes |
+| observed tier: flagged rows equal the evaluation log's counts, no duplicates | yes |
+| observed tier: every matured event scored once, none before session t+2+h | yes |
+| observed tier: uses no baseline or challenger name | yes |
 
 ### Rebuild-from-raw comparison
 
@@ -146,6 +150,29 @@ Champion `ens_mom_ear`: 2 of 8 measured criteria met.
 | G9 owner's checks | contract note matched, tax treatment confirmed, broker API and static IP ready | by hand | by hand |
 
 
+
+### Observed signals as the scoreboard would show them (in sample: this window is where the signal was found)
+
+## Observed signals
+
+Logged forward without a shadow slot (Phase 3 rules v1.1). An observed signal cannot become champion and
+does not change the challengers' margin. Signals ever observed: 1, which sets `required_t`.
+The label "confirmed forward" is read only at 250, 375, 500 ... evaluated sessions and needs 200 scored events,
+`t` at least `required_t`, and a mean excess above one round trip of costs, also when entering a session later.
+Running numbers between checkpoints decide nothing.
+
+| signal | horizon | sessions | judged_on_sessions | events | mean_excess | t | required_t | after_costs | after_costs_one_session_later | status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| results_advance_5d | 5 | 489 | 375 | 234 | 1.58% | 4.81 | 1.96 | 1.12% | 1.23% | CONFIRMED FORWARD at this checkpoint: may be proposed for a use (a new registration) |
+
+Reported, not required:
+
+| signal | hit_rate | median_excess | mean_minus_momentum_tenth | mean_excess_rank_1-100 | mean_excess_rank_101-250 | mean_excess_rank_251-500 |
+|---|---|---|---|---|---|---|
+| results_advance_5d | 54.70% | 0.62% | 1.49% | 1.28% | 1.29% | 1.80% |
+
+
+Events flagged in the replay: 340 on 128 of 496 sessions. Decision horizons: {'results_advance_5d': 5}.
 
 ### Sessions on which a challenger was silent
 

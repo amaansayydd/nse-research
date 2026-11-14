@@ -9,8 +9,10 @@ forward record decides.
 ## State
 
 Phase 0 (data) and Phase 1 (baselines, scoring, automation) built on 2026-11-12; the forward record
-started that evening. Phase 2 (discovery loop) has tested five ideas; three passed their backtests. Phase 3 (champion
+started that evening. Phase 2 (discovery loop) has tested seven ideas; three passed their backtests. Phase 3 (champion
 and challengers) was built on 2026-11-13: two challengers predict in shadow, the seat is empty.
+An observation tier (Phase 3 rules v1.1, 2026-11-14) logs further signals forward without a shadow
+slot; the first is `results_advance_5d`.
 Phase 4 (graduation criteria, after-tax tracking, live-trading plan) was written the same day, in
 advance: `research_log.md` and `live_trading.md`. No real money is involved. See `research_log.md` for the standing rules and
 frozen definitions, `data/README.md` for sources and every known data flaw, and
@@ -28,14 +30,16 @@ frozen definitions, `data/README.md` for sources and every known data flaw, and
 | `src/nsr/models.py` | Baselines `random`, `mom_12_1`, `rev_5`; challenger `ear_drift_60`; roles and the 3-slot limit |
 | `src/nsr/notices.py`, `ensemble.py` | Board-meeting notices from the bundles; rank-average ensemble with forward-only weights |
 | `src/nsr/champion.py`, `monitor.py` | Forward comparison at checkpoints; CUSUM decay monitor |
+| `src/nsr/observed.py` | Observation tier: the event signal, its evaluation log, event scoring, the "confirmed forward" rule |
 | `src/nsr/tax.py`, `graduation.py` | Capital-gains tax on the paper book; graduation criteria tracker |
 | `src/nsr/predict.py` | Builds prediction rows; append-only writer; no-backfill rule |
 | `src/nsr/score.py`, `costs.py`, `sim.py`, `report.py` | IC and calibration, Indian delivery costs, long-only simulator, scoreboard |
 | `src/nsr/daily.py` | The scheduled daily cycle (the only production entry point) |
 | `src/nsr/rehearsal.py` | Two-year replay of the daily cycle, and calibration fitting |
 | `scripts/` | launchd job, installer, `deploy.sh` (pins the code the job runs) |
-| `models/` | Frozen probability slopes (baselines, challengers) and backtest IC expectations for the decay monitor |
+| `models/` | Frozen probability slopes (baselines, challengers, observed) and backtest IC expectations for the decay monitor |
 | `champion.json`, `void_predictions.csv`, `ensemble_weights.csv` | Champion state; rows struck from scoring; ensemble weights used each day |
+| `observed.json`, `observed_runs.csv`, `event_scores.csv` | Observed signals ever started; every evening one was evaluated; per-event results |
 | `predictions.csv` | Append-only forecast log |
 | `scores.csv`, `scoreboard.md` | Matured results per day; forward-only summary |
 | `trial_ledger.csv`, `research_log.md` | Every trial; pre-registrations and results |

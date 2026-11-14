@@ -1,5 +1,6 @@
 """Observation tier (Phase 3 rules v1.1): the event model, its log, scoring and the checkpoint rule."""
 from datetime import datetime, time
+from pathlib import Path
 
 import numpy as np
 import pandas as pd
@@ -209,9 +210,12 @@ def test_status_reads_only_events_up_to_the_checkpoint():
 def test_the_observed_tier_changes_nothing_for_challengers():
     assert observed.NAME not in models.ALL_MODELS and observed.NAME not in models.ROLES
     assert sum(r == "challenger" for r in models.ROLES.values()) == 2
-    assert champion.threshold(len(champion.load_state()["ever_compared"])) == pytest.approx(2.2414, abs=1e-3)
-    st = observed.load_state()
-    assert st["ever_observed"] == [observed.NAME] and st["dropped"] == [] and len(observed.SIGNALS) <= observed.MAX_OBSERVED
+    assert len(observed.SIGNALS) <= observed.MAX_OBSERVED
+    assert observed.load_state(Path("/nonexistent/observed.json")) == {"ever_observed": [], "dropped": []}
+    if champion.STATE.exists() and observed.STATE.exists():       # the project's own state (absent in a release copy)
+        assert champion.threshold(len(champion.load_state()["ever_compared"])) == pytest.approx(2.2414, abs=1e-3)
+        st = observed.load_state()
+        assert st["ever_observed"] == [observed.NAME] and st["dropped"] == []
     assert set(daily.TRACKED) >= {"observed_runs.csv", "event_scores.csv", "predictions.csv"}
     cal = observed.load_calibration()[observed.NAME]
     assert set(cal) == {"1", "5", "20"} and all(0.3 < v < 0.7 for v in cal.values())
