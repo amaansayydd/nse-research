@@ -92,6 +92,23 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 - **Free filing data is shallower than it looks.** Results filings carry no numbers without one
   XBRL file each; shareholding history is complete only from 2022.
 
+## Findings — Phase 2 batch 3 (research-window backtest, 2026-11-14)
+
+- **Counting investor-meeting notices gives nothing usable.** Abnormal meeting frequency predicts
+  returns in Shenzhen; the Indian notices give IC 0.006 (t 0.7) on six usable years, and the plain
+  count is just size and momentum. The subject line mixes results calls with real meetings and the
+  text says nothing more.
+- **A results notice is followed by a run-up that is given back.** After the first notice of a
+  results board meeting, stocks outside the top 100 beat the universe by 0.4 to 0.6% over 5
+  sessions (t 8, 13 of 14 years) and by nothing over 20. That is about one round trip of costs, so
+  it is a fact about timing, not a trade.
+- **The run-up is larger when the results date comes early (in sample).** +1.0% over 5 sessions
+  (t 7.5, all 14 years), +0.54% after costs, then -0.6% over sessions 6 to 20. Seen only after the
+  registered 20-session test failed, so it counts as a new hypothesis with no clean backtest.
+- **The 700-character announcement text is mostly subject lines.** 88% of investor-meeting notices
+  carry no detail; credit-rating and resignation notices do not say which way. Counts and dates
+  can be used; meaning needs the attachments.
+
 ## Findings — Phase 3 build (2026-11-13)
 
 - **Combining known effects adds less IC than it seems.** Momentum plus results drift has IC 0.057
@@ -138,6 +155,8 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 | Announcement text, evening entry | 1 (T-0003) | 0 | 0 | – | Reaction is over by the evening file; give-back follows |
 | Combinations of known effects | 1 (T-0004) | 1 | 1 | too early | Mostly momentum |
 | Insider and promoter disclosures | 1 (T-0005) | 1 | 0 | – | Passes thinly; too few events now to confirm forward |
+| Announcement counts (investor meetings) | 1 (T-0006) | 0 | 0 | – | No signal; only six usable years |
+| Results calendar (date shifts) | 1 (T-0007) | 0 | 0 | – | Fails at 20 sessions; in-sample 5-session run-up worth a forward test |
 
 ## Priors — market (untested here)
 
@@ -151,6 +170,13 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 
 ## Process lessons
 
+- **Register the horizon the mechanism implies, not the default.** T-0007's mechanism pays at the
+  results, a median of 6 sessions after the notice. It was registered at 20 sessions out of habit
+  and failed there, while the 5-session number (t 7.5) became post-hoc. One line of thought before
+  registration would have kept that evidence clean.
+- **A portfolio gate needs a covered span.** The top-20 simulation runs over the whole window, so a
+  signal with six years of data is scored as cash for the other eight. Fix the harness before the
+  next part-history signal is tested.
 - **Never let the scheduled job run a folder that is being edited.** On 2026-11-13 the 07:56 run
   picked up half-written Phase 3 code, wrote 489 rows that had to be voided and logged a failure. The
   risk had been flagged the evening before and not yet fixed. The job now runs a pinned copy of

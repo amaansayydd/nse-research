@@ -594,7 +594,7 @@ subjects for universe names (no returns) showed what the 700-character text can 
 Both registered signals are known families abroad, untested on India as far as a web search on
 2026-11-14 could tell. A pass would be baseline-grade, not a discovery.
 
-### T-0006  Abnormal investor-meeting notices (meet_abnormal_20)      registered: 2026-11-14   status: registered
+### T-0006  Abnormal investor-meeting notices (meet_abnormal_20)      registered: 2026-11-14   status: tested
 Mechanism      : Institutions meet a company's management before they build a position, and
                  managements accept more meetings when they have something good to show. A burst
                  of meetings above the company's own usual rate says informed buyers are doing
@@ -638,9 +638,27 @@ Expected life  : Unknown. The notices are public and easy to count once someone 
 Prior          : About 10% to pass every gate: six usable years, a subject line that mixes
                  results calls with real meetings, and frequent meetings may mean promotion ahead
                  of a share sale as easily as informed buying.
-Result         : (not run yet)
+Result         : FAIL (tested 2026-11-14, 7 hypotheses registered, required t 3.0). Look-ahead
+                 check passed. 1,439 scored sessions, 2018 to 2025, 297 names with a view on average.
+                 Mean 20-session rank IC 0.006 (sd 0.074, t 0.74). After known effects 0.007
+                 (t 1.04). Positive in 4 of 8 years: 2018 +0.030 and 2020 +0.037, then -0.019,
+                 -0.005 and -0.006 in 2023, 2024 and 2025. The top tenth of names beat the average
+                 by 0.18% per 20 sessions before costs, about 2.3% a year, which is less than a
+                 book re-formed every 20 sessions pays in costs.
+                 For: 2017-2021 IC 0.015 (t 1.35). Variants reach t 1.5 to 1.8 at best (window 40;
+                 results-window notices kept, after known effects). None is near 3 and none can
+                 be adopted.
+                 Against the borrowed mechanism: the little there is sits in the 100 most traded
+                 names (IC 0.025, t 1.5), not in neglected ones as in China. The plain level of
+                 meetings has IC 0.012 but 0.002 after known effects: it is size and momentum.
+                 The whole-window top-20 simulation (10.6% a year behind the universe) is not
+                 evidence either way: the signal is silent in 8 of 14 years and the book sits in
+                 cash then. The harness needs a covered-span portfolio test before the next
+                 part-history signal.
+                 Verdict: not shown. An IC under about 0.025 could not have passed on six years of
+                 data, but 0.006 is too small to use even if real. Not adopted.
 
-### T-0007  Results date moved earlier (results_advance_7)      registered: 2026-11-14   status: registered
+### T-0007  Results date moved earlier (results_advance_7)      registered: 2026-11-14   status: tested
 Mechanism      : Managers bring good results forward and put bad ones off. In India a company
                  must give notice of its results board meeting at least five days ahead, so the
                  date is public before the numbers. A date clearly earlier in the quarter than
@@ -680,7 +698,61 @@ Forward        : About 150 events a year now. Confirming a 1% effect at t = 2.4 
                  run would need 14 months of notices instead of 240 days.
 Expected life  : Long in the US literature, where it has been public since the 1980s.
 Prior          : About 15% to pass every gate.
-Result         : (not run yet)
+Result         : FAIL (tested 2026-11-14, 7 hypotheses registered, required t 3.0). Look-ahead
+                 check passed. 2,864 scored events. Mean 20-session excess over the universe
+                 +0.42% (month-clustered t 1.83), median -1.25%, hit rate 45%, positive in 8 of 14
+                 years. After one round trip -0.04%; entering a session later +0.26% before costs.
+                 Variants: delay of 7 or more -0.37% (t -1.76, the expected sign); advance of 14
+                 or more +0.11% (t 0.3, so no dose-response); advance of 4 or more +0.37% (t 1.9);
+                 no peer adjustment +0.39% (t 2.1). Ranks 101-250 alone +1.11% (t 3.0); top 100
+                 and ranks 251-500 nothing. Event stocks are ordinary on momentum, volatility and
+                 liquidity (ranks 0.48 to 0.55).
+                 Not adopted at 20 sessions.
+
+                 Post-hoc, in sample (`posthoc_t0007.py`, `T-0007_posthoc.json`). The registered
+                 run reports horizons 1 and 5, and they show what the 20-session number hides:
+                 - Every first results notice (24,287 events) is followed by +0.41% over 5 sessions
+                   (t 8.2), positive in 13 of 14 years, and by +0.07% over 20 (t 0.7). The rise
+                   comes before the results and is given back after. It is absent in the top 100
+                   (0.00%), +0.40% in ranks 101-250, +0.57% in ranks 251-500, and absent for the
+                   same stocks 30 sessions earlier (+0.10%) or later (-0.03%). At 0.45% a round
+                   trip it cannot be traded on its own.
+                 - For the trial's early-date events the 5-session excess is +1.00% (t 7.5),
+                   +0.54% after costs, positive in all 14 years (+0.08% to +1.86%), +0.81%, +1.05%
+                   and +1.32% in the three sub-periods, +0.74% entering a session later and +0.66%
+                   two later, +0.59% (t 4.7) above other results notices of the same month, +0.70%
+                   without the best 1% of events. Sessions 6 to 20 then lose 0.58% (t -2.9).
+                 Read honestly: the 5-session horizon was chosen after seeing the data. With a t
+                 of 7.5 the choice among three horizons cannot explain the number, but the
+                 registered mechanism is not what the data shows. Good results brought forward
+                 would keep their gain after the results; this gain reverses. It looks like a
+                 run-up into results that is larger when the date comes early. There is no
+                 dose-response (14 days early is no better than 7), the top 100 shows +0.37%
+                 (t 1.3), and the net +0.54% rests on the 0.45% cost estimate in names where
+                 slippage is least certain.
+                 Status: T-0007 rejected as registered. "Early results date, 5-session hold" is a
+                 new hypothesis whose backtest is already seen; only forward data or the holdout
+                 can test it. Not registered yet: it needs the owner's decision, because Phase 3
+                 has no rule for event signals and it would take the last shadow slot.
+
+### Batch 3 summary (2026-11-14)
+
+Two hypotheses registered and tested, both FAIL on their registered tests. T-0006 (investor-meeting
+notices) shows nothing usable. T-0007 (results date moved earlier) fails at the registered 20
+sessions and shows a strong, in-sample, 5-session run-up that reverses. Trials to date: 7
+hypotheses, 3 passes (two known effects and their combination, one known family), 4 failures.
+Benjamini-Hochberg at 10% keeps T-0007's p-value (0.034) but it fails the t = 3 rule and the cost
+gates, so the verdict stands.
+
+Open for the owner: whether to register the 5-session version (as T-0008, forward-only evidence)
+and write an event rule for Phase 3. Forward cost: about 150 events a year with 6.5% of noise per
+event, so about 240 events (1.6 years) to reach t = 2.39 if the full +1.0% holds, about 500 events
+(3.3 years) at +0.7%, and no useful answer at +0.5% or less once costs are taken off.
+
+Harness gaps found: (1) the top-20 portfolio gate treats a signal that is silent for years as
+holding cash; (2) the default 20-session horizon was used for T-0007 although its mechanism pays
+at the results, a median of 6 sessions after the notice.
+
 
 ### Harness validation (2026-11-12, before any trial was scored)
 
