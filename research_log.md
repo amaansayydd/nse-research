@@ -745,14 +745,93 @@ Benjamini-Hochberg at 10% keeps T-0007's p-value (0.034) but it fails the t = 3 
 gates, so the verdict stands.
 
 Open for the owner: whether to register the 5-session version (as T-0008, forward-only evidence)
-and write an event rule for Phase 3. Forward cost: about 150 events a year with 6.5% of noise per
-event, so about 240 events (1.6 years) to reach t = 2.39 if the full +1.0% holds, about 500 events
-(3.3 years) at +0.7%, and no useful answer at +0.5% or less once costs are taken off.
+and write an event rule for Phase 3. Forward cost: about 150 to 200 events a year with 6.5% of
+noise per event and a month-clustering factor of 1.09, so about 290 events (1.5 to 2 years) to
+reach t = 2.39 if the full +1.0% holds, about 580 events (3 to 4 years) at +0.7%, and no useful
+answer at +0.5% or less once costs are taken off. (Corrected the same day: the first version of
+this paragraph left out the clustering and said 240 and 500 events.)
 
 Harness gaps found: (1) the top-20 portfolio gate treats a signal that is silent for years as
 holding cash; (2) the default 20-session horizon was used for T-0007 although its mechanism pays
 at the results, a median of 6 sessions after the notice.
 
+
+## DRAFT for owner approval (2026-11-14). Not in force. Nothing below is registered or deployed
+
+Two pieces, to be approved or rejected together: a new trial (T-0008) and the Phase 3 rule it needs.
+If approved, both are frozen as written, T-0008 gets its ledger rows, and only then is code deployed.
+
+### DRAFT T-0008  Early results date, 5-session hold (results_advance_5d)
+Mechanism      : After the first notice of a results board meeting, mid and small caps rise against
+                 the universe until the results and give it back after. The rise is larger when
+                 the date is clearly earlier in the quarter than a year before. Why is not
+                 established: buying ahead of results, drawn by an early date, fits the reversal
+                 better than "good results brought forward" does.
+Why it survives: About 0.5% after costs on positions held a week, in names too small for funds,
+                 at about 150 to 200 events a year. Too little money to attract anyone large.
+Novelty        : Known families: the run-up before earnings announcements (Frazzini and Lamont
+                 2007; Barber and others 2013) and earnings-date changes (Johnson and So 2018).
+Data           : Board-meeting notices in the daily bundles, known on the evening of the bundle's
+                 date. The daily run would keep 460 days of them instead of 240.
+Design         : The T-0007 event exactly as registered there: first notice of a results meeting,
+                 abnormal shift of -7 days or less after removing the median shift of peers known
+                 by that evening (30 or more), universe member that traded, meeting still ahead.
+                 Nothing is re-tuned: not the 7 days, not the peer step, not the universe. Enter
+                 at the next open, hold 5 sessions.
+Evidence so far: In sample and post-hoc. The horizon was chosen after T-0007 failed at 20
+                 sessions. Backtest numbers (+1.00% per event, t 7.5, +0.54% after costs, all 14
+                 years) size the forward test and prove nothing.
+Pass criteria  : Forward only, by the event rule below. There is no backtest verdict.
+Falsified if   : The forward mean excess has t below 0.5 after 500 scored sessions, or never
+                 clears costs.
+Expected life  : Unknown. The reversal after results says it is not information, so it can
+                 vanish as soon as a few traders lean against it.
+Prior          : About 25% to become eligible within three years. More likely than not real
+                 before costs; less likely than not worth trading after them.
+If it passes   : It cannot hold the champion seat: 150 to 200 one-week positions a year are not a
+                 20-name book. At 5% of the book per position its ceiling is about 1 to 4% a year
+                 on the whole book before tax, less when a results season sends more events than
+                 there are free slots. Its use would be as an overlay on the champion's book,
+                 which is a new design with its own registration.
+
+### DRAFT Phase 3 rules v1.1: event challengers (adds to v1, changes nothing for dense challengers)
+
+| Item | Rule |
+|---|---|
+| What an event challenger is | A signal that flags a few names on some evenings instead of ranking the universe. It writes rows to `predictions.csv` only for flagged names, in the same scheduled run, and is silent otherwise. It can never stop the baselines |
+| Slot and trial count | It takes one of the 3 shadow slots and gets an F- row. N counts it. With T-0008, N becomes 3 and the margin for every challenger, including the two running now, rises from 2.24 to 2.39 |
+| Decision horizon | The horizon in the signal's registration (T-0008: 5 sessions) |
+| Statistic | Mean excess return per flagged name over the equal-weight universe (members that traded), from the next open over the decision horizon. Standard error clustered by calendar month. Voided rows excluded |
+| Minimum | 250 scored sessions since its first counted prediction, and 200 scored events. Nothing is decided earlier |
+| Checkpoints | The same as dense challengers: 250, 375, 500, ... scored sessions, on the events up to the checkpoint |
+| Margin | Clustered t of the mean excess at least c(N) |
+| Also required | Mean excess minus one round trip under the Phase 1 cost model (0.45% today) above zero, also when entering one session later; `random` shows no skill |
+| Reported, not required | The mean after taking off what stocks in the same momentum tenth earned over the same days; hit rate; median; by liquidity bucket |
+| What eligibility earns | The owner's holdout check (one of the 3 looks) and the owner's decision on a use. Never the champion seat directly |
+| Futility | From 500 scored sessions, clustered t below 0.5 at a checkpoint: retired with a postmortem. The slot frees; N does not change |
+| Decay monitor | None while in shadow. One is designed if it is ever put to use |
+| Voiding, learning, what counts | As in v1 |
+
+### What the draft costs and how long it takes
+
+| Item | Number |
+|---|---|
+| Events needed for t = 2.39 if the full +1.0% holds | about 290 (noise 6.5% per event, clustering factor 1.09) |
+| The same at +0.7% | about 580 |
+| The same at +0.5% | about 1,140, and it would not clear costs |
+| Events a year | 129 in 2024, 166 in 2025 to early October; 150 to 200 expected |
+| First checkpoint that could decide | 375 or 500 sessions (1.5 to 2 years) at full strength; 3 to 4 years at +0.7% |
+| Cost to the two running challengers | Margin 2.24 to 2.39: about 14% more sessions. If their backtests hold in full, the deciding checkpoints (500 and 625) do not move |
+| Slots | 3 of 3 used. A stronger later idea would have to wait for a retirement |
+
+What would be built on approval, before any counted prediction: the event model inside the daily
+run with the notice window extended to 460 days; event rows in the prediction log; an event score
+file and scoreboard section; the checkpoint logic above; a parity check that the live event list
+equals the research one on the research window; tests; a rehearsal replay; then `scripts/deploy.sh`.
+
+Not recommended: spending a holdout look on it now. The holdout year holds about 150 events, which
+would give t near 1.9 even if the full effect is real. The forward record gives the same answer
+within about a year at no cost in looks.
 
 ### Harness validation (2026-11-12, before any trial was scored)
 
