@@ -853,6 +853,24 @@ log; an event score file; the "Observed signals" scoreboard section and its chec
 parity check that the live event list equals the research one on the research window; tests; a
 rehearsal replay; then `scripts/deploy.sh`.
 
+### Verification before go-live (2026-11-14)
+
+| Check | Result |
+|---|---|
+| Live event list against the research definition (`nsr.research.observed_check`) | 3,093 events in each over 3,683 sessions (2011-01-03 to 2025-11-11), none in only one, largest score difference 0.0 |
+| Can that check fail? | Yes: with the old 240-day notice window the live function finds 0 of the 340 events in the last 500 sessions |
+| Tests | 154 pass (10 new), also on the release copy with the production Python |
+| Rehearsal replay, 496 sessions | 15 of 15 checks, 4 of them for the observed tier. 340 events flagged, the research count. To checkpoint 375: 234 events, +1.58%, +1.69% entering a session later, both equal to the research code. In sample, not evidence |
+| Dry run on the deployed release | Baselines and challengers rank exactly what the live run of 2026-11-13 ranked (500, 500, 498, 489, 465). Long notice window: 354 sessions, 1 without notices, 22,305 notices. The observed step ran and would flag 0 names for 2026-11-13 |
+| Release | 8343161, deployed 2026-11-14 13:36 |
+
+Not verified: that the live function flags a name on production data. The one production
+evaluation so far (count only) flagged none, and holdout-window days cannot be replayed. Results
+notices are rare from mid-November to late December, so quiet evenings are expected until the
+December-quarter season; each one is still logged in `observed_runs.csv`.
+
+First evaluation that can count: as-of 2026-11-16, at the 20:30 run.
+
 Weak points of this design, stated now: (1) two error-control families mean a signal can be
 "confirmed forward" at a lower bar than a challenger faces; the label is kept from the seat for
 that reason. (2) Every observed signal is more code in the nightly run; the cap of 10 and the
