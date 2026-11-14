@@ -943,6 +943,8 @@ Six other momentum funds trade less (MOMOMENTUM, HDFCMOMENT, MOMENTUM, MOMENTUM3
 | Daily dry run on the new code | random 500, rev_5 500, ens_mom_ear 498, mom_12_1 489, ear_drift_60 465; observed signal would flag 0. Identical to the live run of 2026-11-13 |
 | Tests | 156 pass (2 new: fund numbering, fund rows) |
 | Rehearsal replay, 496 sessions | 15 of 15 checks. Its report differs from the previous one by exactly one added row |
+| Release a9ec51a deployed 2026-11-14 18:37, dry run in the scheduled job's environment | Same counts as above; the production panel's non-fund rows still hash the same |
+| Not verified | The fund rows on the live scoreboard. It needs three forward sessions and has two; the rehearsal runs the same function |
 
 ### What the rehearsal window shows (in sample, 496 sessions from 2023-11-12 to 2025-11-11, not evidence)
 
