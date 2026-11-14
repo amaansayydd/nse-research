@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-14 07:57 IST. Prediction days logged: 2. Days with a matured score: 0.
+Updated 2026-11-14 20:30 IST. Prediction days logged: 2. Days with a matured score: 0.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -22,12 +22,16 @@ rank IC left after the reference model's ranks are removed.
 Top 20 names, Rs 1,000,000 paper capital, trades at the next open with 10 bps slippage a side,
 full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax, except
 `after_tax_total_return`: capital-gains tax paid each financial year (20% short-term, 12.5% long-term above
-Rs 1.25 lakh, 4% cess) and the book sold at the end. NIFTYBEES is bought once, held and sold the same way.
+Rs 1.25 lakh, 4% cess) and the book sold at the end. The funds (NIFTYBEES and the two momentum funds) are
+bought once, held and sold the same way, at a stock's charges, which slightly overstates what a fund costs.
 
 _not enough sessions to simulate yet_
 
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
-model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
+model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
+that leans on momentum must also beat `MOM30IETF`: a fund that follows a published momentum rule and is
+taxed only when sold. Fund rows use the fund's own closing price, which can stray from its holdings' value
+on a thin day. Graduation does not test against the momentum funds yet (criteria v1).
 
 ## Champion and challengers
 
@@ -42,6 +46,24 @@ with every challenger ever started. Meeting the rule earns a holdout check by th
 | ens_mom_ear | mom_12_1 | 0 | 0 |  |  |  |  |  |  | 2.24 | too early: 0 of 250 sessions |
 
 Ensemble weights for the latest prediction: `mom_12_1` 0.500, `ear_drift_60` 0.500. They start equal and move only on matured forward 20-session ICs.
+
+## Observed signals
+
+Logged forward without a shadow slot (Phase 3 rules v1.1). An observed signal cannot become champion and
+does not change the challengers' margin. Signals ever observed: 1, which sets `required_t`.
+The label "confirmed forward" is read only at 250, 375, 500 ... evaluated sessions and needs 200 scored events,
+`t` at least `required_t`, and a mean excess above one round trip of costs, also when entering a session later.
+Running numbers between checkpoints decide nothing.
+
+| signal | horizon | sessions | judged_on_sessions | events | mean_excess | t | required_t | after_costs | after_costs_one_session_later | status |
+|---|---|---|---|---|---|---|---|---|---|---|
+| results_advance_5d | 5 | 0 | 0 | 0 |  |  | 1.96 |  |  | too early: 0 of 250 sessions, 0 of 200 events |
+
+Reported, not required:
+
+| signal | hit_rate | median_excess | mean_minus_momentum_tenth | mean_excess_rank_1-100 | mean_excess_rank_101-250 | mean_excess_rank_251-500 |
+|---|---|---|---|---|---|---|
+| results_advance_5d |  |  |  |  |  |  |
 
 ## Decay monitor
 
