@@ -19,7 +19,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from . import champion, config, ensemble, graduation, monitor, notices, predict, report, score
+from . import champion, config, ensemble, graduation, monitor, notices, observed, predict, report, score
 from .build import build
 from .models import ALL_MODELS, HORIZONS, ROLES, VERSION
 from .panel import Panel
@@ -110,6 +110,38 @@ def replay(panel: Panel, out: Path) -> tuple[pd.DataFrame, pd.DataFrame]:
     return pd.read_csv(preds_path), pd.read_csv(scores_path)
 
 
+def replay_observed(panel: Panel, out: Path, dense: pd.DataFrame) -> tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame, list[str]]:
+    """The observed tier over the same window, night by night as the live run does it: score what
+    has matured, then evaluate tonight's session through `observed.step`. Its files are kept apart
+    from the baselines' so their checks stay exactly as they were."""
+    start, end = window(panel)
+    p, r, e = out / "observed_predictions.csv", out / "observed_runs.csv", out / "event_scores.csv"
+    for f in (p, r, e):
+        f.unlink(missing_ok=True)
+    bm = research_notices()
+    state = {"ever_observed": list(observed.SIGNALS), "dropped": []}
+    mom = {d: g for d, g in dense[dense.model == "mom_12_1"].groupby("asof_date")}
+    frames, done, notes = {}, set(), []
+    for i in range(start, end + 1):
+        created = datetime.combine(panel.dates[i].date(), time(20, 30), tzinfo=config.IST)
+        recent = [frames[j] for j in range(max(start, i - max(HORIZONS) - 3), i) if j in frames]
+        if recent:
+            ev = pd.concat(recent, ignore_index=True)
+            new = observed.score_events(panel, pd.concat([ev, *[mom[d] for d in ev.asof_date.unique() if d in mom]], ignore_index=True),
+                                        done, upto=i)
+            observed.append_event_scores(new, e)
+            done |= set(zip(new.asof_date, new.model, new.horizon))
+        if bm is not None:
+            panel.tables[observed.NOTICE_TABLE] = notices.window(bm, panel.dates[i], observed.NOTICE_DAYS)
+        if observed.step(panel, created, f"rehearsal-{panel.dates[i]:%Y%m%d}", "rehearsal", notes, predictions=p, runs=r, state=state, i=i):
+            key = panel.dates[i].strftime("%Y-%m-%d")
+            allp = pd.read_csv(p)
+            frames[i] = allp[allp.asof_date == key]
+    panel.tables.pop(observed.NOTICE_TABLE, None)
+    read = lambda f, cols: pd.read_csv(f, dtype={"asof_date": str}) if f.exists() and f.stat().st_size else pd.DataFrame(columns=cols)
+    return read(p, predict.COLUMNS), read(r, observed.RUN_COLUMNS), read(e, observed.EVENT_COLUMNS), notes
+
+
 def check_truncated_rebuild(panel: Panel, preds: pd.DataFrame, n_dates: int) -> list[dict]:
     """Rebuild the whole dataset from raw files as if the world ended on day D,
     predict from that, and compare with what the replay logged for D."""
@@ -164,6 +196,10 @@ def check_poisoned_future(panel: Panel, preds: pd.DataFrame, n_dates: int = 3) -
     return ok
 
 
+def obs_notes_failed(notes: list[str]) -> bool:
+    return any("failed" in n for n in notes)
+
+
 def run(n_rebuild_checks: int = 3) -> dict:
     panel = Panel.load()
     assert panel.dates[-1] < pd.Timestamp(config.HOLDOUT_START), "rehearsal must not see the holdout"
@@ -186,6 +222,11 @@ def run(n_rebuild_checks: int = 3) -> dict:
     except RuntimeError:
         append_guard = True
     rebuild = check_truncated_rebuild(panel, preds, n_rebuild_checks) if n_rebuild_checks else []
+    obs_preds, obs_runs, obs_events, obs_notes = replay_observed(panel, OUT, preds)
+    obs_state = {"ever_observed": list(observed.SIGNALS), "dropped": []}
+    obs_expected = sum(int(pos[d] + 2 + h <= len(sessions) - 1) * n for d, n in obs_preds.groupby("asof_date").size().items()
+                       for h in HORIZONS)
+    obs_h = {m: s["h"] for m, s in observed.SIGNALS.items()}
 
     checks = {
         "every session has predictions from the control and every baseline": bool(per_day[steady].reindex(sessions).notna().all().all()),
@@ -200,6 +241,16 @@ def run(n_rebuild_checks: int = 3) -> dict:
         "random model Brier is 0.25": bool(((rnd.brier - 0.25).abs() < 1e-6).all()),
         "rebuild from raw as of day D reproduces the logged predictions":
             bool(rebuild) and all(r["only_in_one"] == 0 and r["max_abs_score_diff"] < 1e-5 for r in rebuild),
+        "observed tier: one evaluation logged for every session and signal, no failures":
+            len(obs_runs) == len(sessions) * len(observed.SIGNALS) and not obs_runs.duplicated(["asof_date", "model"]).any()
+            and not obs_notes_failed(obs_notes),
+        "observed tier: flagged rows equal the evaluation log's counts, no duplicates":
+            int(obs_runs.flagged.sum()) == len(obs_preds) and not obs_preds.duplicated(["asof_date", "model", "symbol"]).any(),
+        "observed tier: every matured event scored once, none before session t+2+h":
+            len(obs_events) == obs_expected and not obs_events.duplicated(["asof_date", "model", "symbol", "horizon"]).any()
+            and bool((obs_events.scored_through <= sessions[-1]).all())
+            and all(pos[t] == pos[d] + 2 + h for d, t, h in zip(obs_events.asof_date, obs_events.scored_through, obs_events.horizon)),
+        "observed tier: uses no baseline or challenger name": not (set(obs_preds.model) & set(ALL_MODELS)),
     }
     sims = report.run_sims(panel, preds, start, end)
     cal = score.calibration_table(panel, preds, 5)
@@ -225,6 +276,10 @@ def run(n_rebuild_checks: int = 3) -> dict:
         graduation.section(panel, preds, scores, {**champion.DEFAULT_STATE, "champion": ensemble.NAME,
                                                   "champion_since": sessions[len(sessions) // 2]},
                            monitor.decay_table(scores), []) if shadow else "_no challengers_", "",
+        "### Observed signals as the scoreboard would show them (in sample: this window is where the signal was found)", "",
+        report.observed_section(observed.table(panel, obs_events, obs_runs, scores, obs_state), obs_state),
+        f"Events flagged in the replay: {len(obs_preds)} on {obs_preds.asof_date.nunique()} of {len(sessions)} sessions. "
+        f"Decision horizons: {obs_h}.", "",
         "### Sessions on which a challenger was silent", "",
         report._fmt(pd.DataFrame([{"model": m, "silent_sessions": int(per_day[m].reindex(sessions).isna().sum())} for m in shadow])) if shadow else "_none_", "",
         "### Calibration at 5 sessions: predicted vs realised chance of beating the median", "",

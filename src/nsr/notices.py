@@ -61,16 +61,24 @@ def frame(records: list[tuple]) -> pd.DataFrame:
     return bm.dropna(subset=["meeting"]).reset_index(drop=True)
 
 
-def window(bm: pd.DataFrame, asof: pd.Timestamp) -> pd.DataFrame:
+def window(bm: pd.DataFrame, asof: pd.Timestamp, days: int = LOOKBACK_DAYS) -> pd.DataFrame:
     """Notices known by `asof` and filed within the lookback."""
-    return bm[(bm.known <= asof) & (bm.known > asof - pd.Timedelta(days=LOOKBACK_DAYS))]
+    return bm[(bm.known <= asof) & (bm.known > asof - pd.Timedelta(days=days))]
 
 
-def recent(sessions: pd.DatetimeIndex) -> tuple[pd.DataFrame, dict]:
+def coverage(bm: pd.DataFrame, sessions: pd.DatetimeIndex, days: int = LOOKBACK_DAYS) -> dict:
+    """Counts for the run log: sessions inside the lookback, how many of them carry no notice."""
+    asof = sessions[-1]
+    inside = sessions[sessions > asof - pd.Timedelta(days=days)]
+    w = window(bm, asof, days)
+    return {"sessions": len(inside), "sessions_without_notices": int(len(inside) - inside.isin(w.known).sum()), "notices": len(w)}
+
+
+def recent(sessions: pd.DatetimeIndex, lookback_days: int = LOOKBACK_DAYS) -> tuple[pd.DataFrame, dict]:
     """Parse the bundles of the sessions inside the lookback that ends at the last session.
     Also returns coverage counts for the run log."""
     asof = sessions[-1]
-    days = [d.date() for d in sessions[sessions > asof - pd.Timedelta(days=LOOKBACK_DAYS)]]
+    days = [d.date() for d in sessions[sessions > asof - pd.Timedelta(days=lookback_days)]]
     per_day = [parse_bm(d) for d in days]
     bm = frame([r for recs in per_day for r in recs])
     return bm, {"sessions": len(days), "sessions_without_notices": sum(1 for r in per_day if not r), "notices": len(bm)}

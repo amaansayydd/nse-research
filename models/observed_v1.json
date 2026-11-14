@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "fit_sessions": [
+    "2012-01-02",
+    "2023-10-05"
+  ],
+  "events": 2576,
+  "note": "p_beat = share of research events that beat the universe median; in sample",
+  "p_beat": {
+    "results_advance_5d": {
+      "1": 0.5161,
+      "5": 0.5567,
+      "20": 0.4862
+    }
+  }
+}

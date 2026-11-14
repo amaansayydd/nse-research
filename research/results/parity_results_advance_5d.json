@@ -1,0 +1,15 @@
+{
+ "sessions": 3683,
+ "window": [
+  "2011-01-03",
+  "2025-11-11"
+ ],
+ "research_events": 3093,
+ "live_events": 3093,
+ "only_in_research": 0,
+ "only_in_live": 0,
+ "max_abs_score_diff": 0.0,
+ "control: live events found with a 240-day notice window, last 500 sessions": 0,
+ "control: research events in the same sessions": 340,
+ "ok": true
+}

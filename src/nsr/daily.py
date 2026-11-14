@@ -25,7 +25,7 @@ from datetime import date, datetime, timedelta
 import pandas as pd
 import requests
 
-from . import api, champion, config, ensemble, graduation, monitor, notices, predict, report, score
+from . import api, champion, config, ensemble, graduation, monitor, notices, observed, predict, report, score
 from .build import build
 from .download import HEADERS, daterange, fetch_one, load_manifest, manifest_path, raw_path
 from .models import ALL_MODELS, ENSEMBLES, ROLES
@@ -34,8 +34,10 @@ from .panel import Panel
 RUN_LOG = config.PROJECT / "run_log.md"
 SCOREBOARD = config.PROJECT / "scoreboard.md"
 WEIGHTS_LOG = config.PROJECT / "ensemble_weights.csv"
-TRACKED = ["predictions.csv", "scores.csv", "scoreboard.md", "run_log.md", "data/raw/manifest.csv", "ensemble_weights.csv"]
+TRACKED = ["predictions.csv", "scores.csv", "scoreboard.md", "run_log.md", "data/raw/manifest.csv", "ensemble_weights.csv",
+           "observed_runs.csv", "event_scores.csv"]
 MAX_SILENT_NOTICE_SESSIONS = 30
+MAX_SILENT_NOTICE_SESSIONS_LONG = 65      # the same share of the 520-day window the observed signal reads
 ALERT_AFTER = 3
 ALERT_LINE = "> **ALERT: the last {n} runs failed. Check the notes column below.**"
 FORWARD_START = config.HOLDOUT_END + timedelta(days=1)
@@ -122,24 +124,36 @@ def forward_scoreboard(panel: Panel, preds: pd.DataFrame, scores: pd.DataFrame, 
     decay = monitor.decay_table(scores)
     voids = sorted(set(pd.read_csv(predict.VOIDS, dtype=str).asof_date)) if predict.VOIDS.exists() else []
     grad = graduation.section(panel, preds, scores, state, decay, challengers, voids)
+    try:                                         # the observed tier must never cost the scoreboard its other sections
+        obs_state = observed.load_state()
+        obs = report.observed_section(observed.table(panel, observed.load_event_scores(), observed.load_runs(), scores, obs_state),
+                                      obs_state)
+    except Exception as e:
+        obs = f"## Observed signals\n\n_not available ({type(e).__name__}: {str(e)[:80]})_\n\n"
     report.write_scoreboard(SCOREBOARD, scores, sims, preds.asof_date.nunique() if len(preds) else 0,
                             f"{now:%Y-%m-%d %H:%M} IST", state=state,
                             comparison=champion.compare(scores, state, challengers),
                             decay=decay, retire=monitor.retire_flags(scores, decay) if len(decay) else {},
-                            weights=weights, graduation=grad)
+                            weights=weights, graduation=grad, observed=obs)
 
 
 def load_notices(panel: Panel, notes: list[str], dry_run: bool = False) -> None:
     """Board-meeting notices for the challengers. A failure here silences them, not the run."""
     try:
-        bm, cov = notices.recent(panel.dates)
+        long, _ = notices.recent(panel.dates, observed.NOTICE_DAYS)
+        bm = notices.window(long, panel.dates[-1]).reset_index(drop=True)     # the 240 days the challengers have always seen
+        cov, cov_long = notices.coverage(bm, panel.dates), notices.coverage(long, panel.dates, observed.NOTICE_DAYS)
         if dry_run:
-            notes.append(f"notices {cov}")
+            notes.append(f"notices {cov}; long window {cov_long}")
         panel.tables["board_meetings"] = bm
+        panel.tables[observed.NOTICE_TABLE] = long
         bm.to_parquet(config.PROD_DIR / "clean" / "board_meetings.parquet", index=False)
+        long.to_parquet(config.PROD_DIR / "clean" / "board_meetings_long.parquet", index=False)
         if cov["sessions_without_notices"] > MAX_SILENT_NOTICE_SESSIONS or not cov["notices"]:
             notes.append(f"board-meeting notices thin: {cov['notices']} notices, "
                          f"{cov['sessions_without_notices']} of {cov['sessions']} sessions have none")
+        if cov_long["sessions_without_notices"] > MAX_SILENT_NOTICE_SESSIONS_LONG:
+            notes.append(f"long notice window thin: {cov_long['sessions_without_notices']} of {cov_long['sessions']} sessions have none")
     except Exception as e:
         notes.append(f"board-meeting notices unavailable ({type(e).__name__}: {str(e)[:80]})")
 
@@ -167,12 +181,22 @@ def cycle(now: datetime, dry_run: bool = False) -> tuple[str, str, int, str]:
     state = champion.load_state()
 
     preds = pd.read_csv(config.PREDICTIONS)
-    counted = predict.drop_void(preds)
+    everything = predict.drop_void(preds)
+    is_observed = everything.model.isin(list(observed.SIGNALS))
+    counted = everything[~is_observed]            # baselines and challengers: the observed tier never enters their scoring
     new_scores = score.score_matured(panel, counted, score.done_keys(config.SCORES), ref_model=state["reference"])
     if not dry_run:
         score.append_scores(new_scores, config.SCORES)
     if len(new_scores):
         notes.append(f"scored {len(new_scores)} date-model-horizon results")
+    try:                                          # observed signals: scored apart, and a failure costs nothing else
+        new_events = observed.score_events(panel, everything, observed.done_keys())
+        if not dry_run:
+            observed.append_event_scores(new_events)
+        if len(new_events):
+            notes.append(f"scored {len(new_events)} observed event rows")
+    except Exception as e:
+        notes.append(f"observed scoring failed ({type(e).__name__}: {str(e)[:80]})")
     scores = load_scores() if not dry_run else pd.concat([load_scores(), new_scores.round(6)], ignore_index=True)
 
     # sessions in the forward period that never got a prediction are gone for good
@@ -224,6 +248,16 @@ def cycle(now: datetime, dry_run: bool = False) -> tuple[str, str, int, str]:
             outcome = "ALREADY_DONE" if have else "STALE_SKIPPED"
             if not have:
                 notes.append(str(e))
+    # observed tier: after every baseline and challenger row is safely written
+    if dry_run or latest > pd.Timestamp(config.HOLDOUT_END):
+        try:
+            wrote = observed.step(panel, now, f"{now:%Y%m%dT%H%M}", "dry" if dry_run else (config.release() or git("rev-parse", "--short", "HEAD")),
+                                  notes, dry_run)
+            n += wrote
+            if wrote and outcome == "ALREADY_DONE":
+                outcome = "OK"
+        except Exception as e:
+            notes.append(f"observed step failed ({type(e).__name__}: {str(e)[:80]})")
     if not dry_run:
         try:                                     # a report problem must never cost a run its predictions
             forward_scoreboard(panel, counted, scores, now, state, weights)

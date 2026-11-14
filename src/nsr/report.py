@@ -140,10 +140,34 @@ would take to raise the alarm: weak signals decay quietly.
 """
 
 
+def observed_section(table: pd.DataFrame | None, state: dict | None) -> str:
+    if table is None or state is None or not state.get("ever_observed"):
+        return ""
+    out = f"""## Observed signals
+
+Logged forward without a shadow slot (Phase 3 rules v1.1). An observed signal cannot become champion and
+does not change the challengers' margin. Signals ever observed: {len(state["ever_observed"])}, which sets `required_t`.
+The label "confirmed forward" is read only at 250, 375, 500 ... evaluated sessions and needs 200 scored events,
+`t` at least `required_t`, and a mean excess above one round trip of costs, also when entering a session later.
+Running numbers between checkpoints decide nothing.
+
+"""
+    if table.empty:
+        return out + "_no observed signal is running_\n\n"
+    t = table.copy()
+    pct = tuple(c for c in t.columns if c.startswith(("mean_", "after_costs", "median_", "hit_rate")))
+    main = ["signal", "horizon", "sessions", "judged_on_sessions", "events", "mean_excess", "t", "required_t",
+            "after_costs", "after_costs_one_session_later", "status"]
+    rest = ["signal"] + [c for c in t.columns if c not in main]
+    out += _fmt(t[main], pct=pct, dec={"t": 2, "required_t": 2})
+    out += "\nReported, not required:\n\n" + _fmt(t[rest], pct=pct)
+    return out + "\n"
+
+
 def write_scoreboard(path: Path, scores: pd.DataFrame, sims: pd.DataFrame, n_pred_days: int, updated: str,
                      state: dict | None = None, comparison: pd.DataFrame | None = None,
                      decay: pd.DataFrame | None = None, retire: dict | None = None, weights: dict | None = None,
-                     graduation: str = "") -> None:
+                     graduation: str = "", observed: str = "") -> None:
     text = f"""# Scoreboard (forward-only)
 
 Updated {updated}. Prediction days logged: {n_pred_days}. Days with a matured score: {scores.asof_date.nunique() if len(scores) else 0}.
@@ -174,4 +198,4 @@ Rs 1.25 lakh, 4% cess) and the book sold at the end. NIFTYBEES is bought once, h
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
 
 """
-    path.write_text(text + challenger_section(state, comparison, weights) + decay_section(decay, retire) + graduation)
+    path.write_text(text + challenger_section(state, comparison, weights) + observed + decay_section(decay, retire) + graduation)
