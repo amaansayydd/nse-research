@@ -756,14 +756,14 @@ holding cash; (2) the default 20-session horizon was used for T-0007 although it
 at the results, a median of 6 sessions after the notice.
 
 
-## DRAFT 2 for owner approval (2026-11-14). Not in force. Nothing below is registered or deployed
+## Phase 3 rules v1.1 and T-0008 (approved by the owner and frozen 2026-11-14, before any observed prediction)
 
-Replaces the first draft (commit 8cb9054), which made T-0008 the third challenger. Two pieces, to
-be approved or rejected together: Phase 3 rules v1.1, which add an observation tier, and T-0008 as
-its first entrant. If approved, both are frozen as written, the ledger rows are added, and only
-then is code deployed. Phase 3 rules v1 stay as they are for challengers and the champion.
+The owner typed APPROVE on draft 2 (commit 75652d5) on 2026-11-14. The text below is that draft,
+unchanged except for the headings and the "Clarifications at freezing" list. An earlier draft
+(commit 8cb9054) made T-0008 the third challenger and was replaced. Phase 3 rules v1 stay as they
+are for challengers and the champion.
 
-### DRAFT Phase 3 rules v1.1: the observation tier
+### Phase 3 rules v1.1: the observation tier
 
 This changes one line of the owner's original brief ("every forward comparison is a trial; the
 threshold rises with challengers ever compared"). Observed signals are counted, but in a family of
@@ -787,7 +787,7 @@ their own, because none of them can take the seat.
 Not in this draft: the combined model whose weights would come from observed signals' forward ICs
 (project review, proposal 2). It needs its own backtest and approval.
 
-### DRAFT T-0008  Early results date, 5-session hold (results_advance_5d), first observed signal
+### T-0008  Early results date, 5-session hold (results_advance_5d)      registered: 2026-11-14   status: observed (O-001)
 Mechanism      : After the first notice of a results board meeting, mid and small caps rise against
                  the universe until the results and give it back after. The rise is larger when
                  the date is clearly earlier in the quarter than a year before. Why is not
@@ -818,7 +818,7 @@ If it passes   : Its ceiling as an overlay is about 1 to 4% a year on the whole 
                  at 5% of the book per position, less when a results season sends more events
                  than there are free slots. The overlay would be a new design and a new trial.
 
-### What draft 2 costs and how long it takes
+### What it costs and how long it takes
 
 | Item | Number |
 |---|---|
@@ -830,7 +830,24 @@ If it passes   : Its ceiling as an overlay is about 1 to 4% a year on the whole 
 | Events a year | 129 in 2024, 166 in 2025 to early October; 150 to 200 expected |
 | First checkpoint that could decide | 250 or 375 sessions (1 to 1.5 years) at full strength; 2 to 4 years at +0.7% |
 
-What would be built on approval, before any counted prediction: an "observed" role in the daily
+### Clarifications at freezing (2026-11-14, before any code ran live)
+
+1. Notice window: 520 days, not the 460 written above. The base-year notice can be up to 500 days
+   older than this year's, and 520 makes the live event list equal the research definition in
+   every case.
+2. "First counted prediction" is the first evening the deployed run evaluates the signal, whether
+   or not it flags a name. Every evaluation is logged in `observed_runs.csv`, so a session with no
+   event is on record as a session, not as a gap. A session the run missed is not counted and its
+   events are lost; nothing is backfilled.
+3. An event is scored when session t+2+h exists, one session later than strictly needed, so that
+   the excess for entering a session later is written in the same row of `event_scores.csv`.
+4. Event rows in `predictions.csv` carry score = days early after the peer step, rank_pct = 1,
+   and p_beat = the share of research events before the rehearsal window that beat the universe
+   median (a constant per horizon, frozen in `models/observed_v1.json`).
+5. One round trip is `CostModel().round_trip_rate(50,000)` = 0.4545%.
+6. State is in `observed.json` (signals ever observed, dropped signals). M = 1 today.
+
+Built before any counted prediction: an "observed" role in the daily
 run; the event model with the notice window extended to 460 days; event rows in the prediction
 log; an event score file; the "Observed signals" scoreboard section and its checkpoint logic; a
 parity check that the live event list equals the research one on the research window; tests; a
