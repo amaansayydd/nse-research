@@ -202,3 +202,123 @@ def insider_buys(rd: ResearchData, min_value: float = 1_000_000.0, cooldown: int
                 last[c] = i_
         ev = ev[np.array(keep, dtype=bool)]
     return ev.sort_values(["i", "col"]).reset_index(drop=True)
+
+
+# ------------------------------------------------------------------ T-0006
+MEET = re.compile(r"^Analysts?\s*/\s*Institutional Invest", re.I)
+MEET_POSTING = re.compile(r"transcript|recording|audio|video|presentation", re.I)   # material posted after a call
+MEET_BEFORE_DAYS, MEET_AFTER_DAYS = 15, 30      # a notice this close to a results meeting is a results call
+COVERED_ROWS = 50                               # a session whose bundle carries fewer announcements has no text
+
+
+def _rolling_sum(a: np.ndarray, start_back: int, length: int) -> np.ndarray:
+    """Sum over the `length` rows that end `start_back` rows before each row (0 = ends at the row)."""
+    c = np.cumsum(np.vstack([np.zeros((1,) + a.shape[1:]), a]), axis=0)
+    T = len(a)
+    hi = np.clip(np.arange(T) + 1 - start_back, 0, T)
+    lo = np.clip(hi - length, 0, T)
+    return c[hi] - c[lo]
+
+
+def investor_meets(rd: ResearchData, offcycle: bool = True, drop_postings: bool = True) -> pd.DataFrame:
+    """Notices of analyst or institutional-investor meetings: one row per notice with its session
+    `i` and column `col`. With `offcycle`, a notice is dropped if a results board meeting of the
+    same stock, itself notified by then, lies from 30 days before to 15 days after the notice."""
+    an = rd.tables["announcements"]
+    m = an[an.text.str.contains(MEET)]
+    if drop_postings:
+        m = m[~m.text.str.contains(MEET_POSTING)]
+    ev = pd.DataFrame({"known": m.known.to_numpy(), "i": rd.dates.get_indexer(m.known),
+                       "col": rd.symbol_columns(m.known, m.symbol) if len(m) else np.empty(0, dtype=np.int64)})
+    ev = ev[(ev.i >= 0) & (ev.col >= 0)].reset_index(drop=True)
+    if offcycle and len(ev):
+        bm = rd.tables["board_meetings"]
+        r = bm[bm.purpose.str.contains(RESULTS)][["known", "symbol", "meeting"]]
+        r = r.assign(col=rd.symbol_columns(r.known, r.symbol) if len(r) else np.empty(0, dtype=np.int64))
+        r = r[r.col >= 0].rename(columns={"known": "bm_known"})
+        ev["row"] = np.arange(len(ev))
+        j = ev.merge(r[["col", "bm_known", "meeting"]], on="col")
+        near = j[(j.bm_known <= j.known) & (j.meeting >= j.known - pd.Timedelta(days=MEET_AFTER_DAYS))
+                 & (j.meeting <= j.known + pd.Timedelta(days=MEET_BEFORE_DAYS))]
+        ev = ev[~ev.row.isin(near.row)].drop(columns="row")
+    return ev.reset_index(drop=True)
+
+
+def investor_meet_abnormal(rd: ResearchData, window: int = 20, base: int = 240, offcycle: bool = True,
+                           drop_postings: bool = True, abnormal: bool = True) -> np.ndarray:
+    """Investor-meeting notices in the last `window` sessions minus the stock's own rate over the
+    `base` sessions before that, both per `window` covered sessions. A session is covered if the
+    bundle carried at least 50 announcements. No view (NaN) for a stock with no such notice in the
+    base period, or when under 3/4 of the window or half of the base period is covered."""
+    T, N = rd.member.shape
+    an = rd.tables["announcements"]
+    day = rd.dates.get_indexer(an.known)
+    per_day = np.bincount(day[day >= 0], minlength=T)
+    cov = (per_day >= COVERED_ROWS).astype(float)[:, None]
+    ev = investor_meets(rd, offcycle, drop_postings)
+    C = np.zeros((T, N))
+    np.add.at(C, (ev.i.to_numpy(), ev.col.to_numpy()), 1.0)
+    n_w, c_w = _rolling_sum(C, 0, window), _rolling_sum(cov, 0, window)
+    n_b, c_b = _rolling_sum(C, window, base), _rolling_sum(cov, window, base)
+    with np.errstate(divide="ignore", invalid="ignore"):
+        recent, usual = n_w / c_w * window, n_b / c_b * window
+    S = recent - usual if abnormal else recent
+    ok = (c_w >= 0.75 * window) & (c_b >= 0.5 * base) & (n_b >= 1)
+    return np.where(ok, S, np.nan)
+
+
+# ------------------------------------------------------------------ T-0007
+MAX_LAG_DAYS = 75           # a results meeting later than this after the quarter end is not that quarter's
+
+
+def results_calendar(rd: ResearchData) -> pd.DataFrame:
+    """One row per stock and fiscal quarter: the first notice of its results board meeting
+    (`known`, `lag` = days from quarter end to the date first announced) and `final_lag`, the
+    date in the last notice filed for that quarter."""
+    bm = rd.tables["board_meetings"]
+    lead = (bm.meeting - bm.known).dt.days
+    r = bm[bm.purpose.str.contains(RESULTS) & (lead >= 0) & (lead <= MAX_LEAD_DAYS)][["known", "symbol", "meeting"]].copy()
+    r["col"] = rd.symbol_columns(r.known, r.symbol) if len(r) else np.empty(0, dtype=np.int64)
+    r = r[r.col >= 0]
+    r["qend"] = r.meeting.dt.to_period("Q").dt.start_time - pd.Timedelta(days=1)
+    r["lag"] = (r.meeting - r.qend).dt.days
+    r = r[r.lag <= MAX_LAG_DAYS].sort_values(["col", "qend", "known", "meeting"], kind="stable")
+    g = r.groupby(["col", "qend"], sort=False)
+    out = g.first().reset_index()[["col", "qend", "known", "meeting", "lag"]]
+    out["final_lag"] = g.lag.last().to_numpy()
+    return out
+
+
+def results_date_shift(rd: ResearchData, min_days: int = 7, direction: str = "advance", peers: bool = True,
+                       min_peers: int = 30) -> pd.DataFrame:
+    """Results board meetings first announced for a date earlier in the quarter than a year before.
+    shift = this quarter's lag (first notice) minus the same quarter's final lag a year earlier.
+    With `peers`, the median shift of the universe members whose notice for the same quarter was
+    known by that evening is taken off first (at least `min_peers` of them, the stock included).
+    Event on the evening of the first notice if the result is `min_days` or more earlier
+    (`direction="delay"`: later). The meeting must be after that day."""
+    cal = results_calendar(rd)
+    base = cal[["col", "qend", "final_lag"]].assign(qend=lambda d: d.qend + pd.DateOffset(years=1)).rename(columns={"final_lag": "base_lag"})
+    base["qend"] = base.qend + pd.offsets.QuarterEnd(0)                     # 30 Jun + 1 year stays a quarter end
+    c = cal.merge(base, on=["col", "qend"])
+    c["i"] = rd.dates.get_indexer(c.known)
+    c = c[c.i >= 0]
+    c = c[rd.member[c.i.to_numpy(), c.col.to_numpy()]].copy()
+    c["shift"] = (c.lag - c.base_lag).astype(float)
+    c["abnormal"] = c["shift"]
+    if peers:
+        c = c.sort_values(["qend", "known"], kind="stable")
+        med = np.full(len(c), np.nan)
+        pos = 0
+        for _, g in c.groupby("qend", sort=False):
+            s, k = g["shift"].to_numpy(), g.known.to_numpy()
+            for day in np.unique(k):
+                seen = s[k <= day]
+                if len(seen) >= min_peers:
+                    med[pos + np.flatnonzero(k == day)] = np.median(seen)
+            pos += len(g)
+        c["abnormal"] = c["shift"] - med
+    hit = (c.abnormal <= -min_days) if direction == "advance" else (c.abnormal >= min_days)
+    ev = c[hit & (c.meeting > c.known)]
+    ev = ev[rd.panel.traded[ev.i.to_numpy(), ev.col.to_numpy()]]
+    return ev[["i", "col", "shift", "abnormal"]].sort_values(["i", "col"]).drop_duplicates(["i", "col"]).reset_index(drop=True)

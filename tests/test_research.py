@@ -260,3 +260,84 @@ def test_insider_buys_need_size_freshness_membership_and_cooldown():
     assert len(signals.insider_buys(rd, cooldown=0)) == 3 and len(signals.insider_buys(rd, max_lag_days=None)) == 3
     assert len(signals.insider_buys(rd.truncated(d0))) == 1                        # the late filing is not known yet
     assert signals.insider_buys(rd.truncated(d0 - 30)).empty                       # before any disclosure exists
+
+
+# ------------------------------------------------------------------- T-0006, T-0007
+MEET_TEXT = "Analysts/Institutional Investor Meet/Con. Call Updates S1 : S1 Limited has informed the Exchange about Schedule of meet"
+
+
+def _filler(dates, n=60):
+    """Enough unrelated announcements on every session for it to count as covered."""
+    return pd.DataFrame({"known": np.repeat(dates, n), "symbol": "ZZZ", "text": "Updates nothing"})
+
+
+def _meets(dates, symbol, idx, text=MEET_TEXT):
+    return pd.DataFrame({"known": dates[idx], "symbol": symbol, "text": text})
+
+
+def test_rolling_sum_windows():
+    a = np.arange(1.0, 7.0)[:, None]
+    assert signals._rolling_sum(a, 0, 2)[:, 0].tolist() == [1, 3, 5, 7, 9, 11]
+    assert signals._rolling_sum(a, 2, 3)[:, 0].tolist() == [0, 0, 1, 3, 6, 9]
+
+
+def test_investor_meet_score_is_recent_minus_usual():
+    dates = pd.bdate_range("2011-06-01", periods=420)
+    an = pd.concat([_filler(dates), _meets(dates, "S1", [150, 200, 395, 398, 399]), _meets(dates, "S2", [150, 200]),
+                    _meets(dates, "S4", [398], MEET_TEXT.replace("Schedule of meet", "Transcript"))])
+    bm = pd.DataFrame({"known": dates[[390]], "symbol": "S3", "meeting": dates[[396]], "purpose": "Financial Results"})
+    rd = make_rd(tables={"announcements": an, "board_meetings": bm})
+    S = signals.investor_meet_abnormal(rd)
+    c = {s: rd.symbol_columns(pd.Series(dates[[399]]), pd.Series([s]))[0] for s in ("S1", "S2", "S3", "S4")}
+    assert S[399, c["S1"]] == pytest.approx(3 - 2 / 12)          # 3 in the last 20 sessions, 2 in the 240 before
+    assert S[399, c["S2"]] == pytest.approx(0 - 2 / 12)          # quieter than usual
+    assert np.isnan(S[399, c["S3"]]) and np.isnan(S[399, c["S4"]])   # never used the notice / only a transcript
+    assert np.isnan(S[130, c["S1"]]) and np.isfinite(S[200, c["S1"]])   # base period half covered only from session 139
+    assert signals.investor_meet_abnormal(rd, abnormal=False)[399, c["S1"]] == pytest.approx(3.0)
+
+
+def test_investor_meet_near_results_is_a_results_call_and_gaps_do_not_count():
+    dates = pd.bdate_range("2011-06-01", periods=420)
+    an = pd.concat([_filler(dates[:380]), _filler(dates[390:]), _meets(dates, "S1", [100, 395, 399])])
+    bm = pd.DataFrame({"known": dates[[392]], "symbol": "S1", "meeting": dates[[397]], "purpose": "Financial Results"})
+    rd = make_rd(tables={"announcements": an, "board_meetings": bm})
+    assert len(signals.investor_meets(rd)) == 1 and len(signals.investor_meets(rd, offcycle=False)) == 3
+    S = signals.investor_meet_abnormal(rd, offcycle=False)
+    col = rd.symbol_columns(pd.Series(dates[[399]]), pd.Series(["S1"]))[0]
+    assert np.isnan(S[399, col])                                 # only 10 of the last 20 sessions have text
+    assert S[419, col] == pytest.approx(0.0 - 2 / 230 * 20)      # 2 notices in 230 covered base sessions, not 240
+
+
+def _results(dates, rows):
+    return pd.DataFrame([{"known": dates[k], "symbol": s, "meeting": pd.Timestamp(m), "purpose": "Financial Results"} for s, k, m in rows])
+
+
+def test_results_date_shift_is_measured_against_peers():
+    dates = pd.bdate_range("2011-06-01", periods=420)
+    k1, k2 = dates.get_loc(pd.Timestamp("2011-07-20")), dates.get_loc(pd.Timestamp("2012-07-05"))
+    last = [(f"S{j}", k1, "2011-08-10") for j in range(1, 7)]
+    now = [(f"S{j}", k2, "2012-08-10") for j in range(2, 7)] + [("S1", k2, "2012-07-31")]      # S1 is 10 days early
+    rd = make_rd(tables={"board_meetings": _results(dates, last + now)})
+    ev = signals.results_date_shift(rd, min_peers=5)
+    assert len(ev) == 1 and ev.i[0] == k2 and ev.abnormal[0] == -10
+    assert ev.col[0] == rd.symbol_columns(pd.Series(dates[[k2]]), pd.Series(["S1"]))[0]
+    assert signals.results_date_shift(rd, min_peers=7).empty                 # too few peers known yet
+    assert signals.results_date_shift(rd, min_days=14, min_peers=5).empty
+    late = signals.results_date_shift(rd, direction="delay", min_peers=5)
+    assert late.empty
+    everyone = [(f"S{j}", k2, "2012-07-31") for j in range(1, 7)]            # the whole market moved: nobody stands out
+    rd2 = make_rd(tables={"board_meetings": _results(dates, last + everyone)})
+    assert signals.results_date_shift(rd2, min_peers=5).empty
+    assert len(signals.results_date_shift(rd2, peers=False)) == 6
+
+
+def test_results_date_shift_uses_first_notice_now_and_final_date_last_year():
+    dates = pd.bdate_range("2011-06-01", periods=420)
+    k1, k2 = dates.get_loc(pd.Timestamp("2011-07-20")), dates.get_loc(pd.Timestamp("2012-07-05"))
+    last = [(f"S{j}", k1, "2011-08-10") for j in range(1, 7)] + [("S1", k1 + 3, "2011-08-12")]   # S1 moved to the 12th
+    now = [(f"S{j}", k2, "2012-08-10") for j in range(2, 7)] + [("S1", k2, "2012-08-03"), ("S1", k2 + 2, "2012-08-10")]
+    cal = signals.results_calendar(make_rd(tables={"board_meetings": _results(dates, last + now)}))
+    rd = make_rd(tables={"board_meetings": _results(dates, last + now)})
+    ev = signals.results_date_shift(rd, min_peers=5)
+    assert len(ev) == 1 and ev.i[0] == k2 and ev["shift"][0] == -9          # 3 Aug against 12 Aug a year before
+    assert len(cal) == 12

@@ -577,6 +577,111 @@ has used since 2025-10-13 (data/README F31 has the checks). The announcements ta
 was run or re-scored. Research code only; the daily run does not read announcements, so nothing was
 deployed. Still open from F30: announcement text is missing from March to November 2022.
 
+### Batch 3 scoping (2026-11-14, before any return was looked at)
+
+Owner asked for announcement-text ideas now that the parser is repaired. A count of announcement
+subjects for universe names (no returns) showed what the 700-character text can and cannot carry:
+
+| Candidate | Decision | Why |
+|---|---|---|
+| Analyst and investor-meeting notices | Registered (T-0006) | 82,000 notices since 2016, a structured subject line, and a published effect in another market to borrow |
+| Results board-meeting date moved earlier | Registered (T-0007) | Uses the notice files already read by the daily run; about 150 to 300 events a year |
+| Credit rating actions | Not registered | The text says only "Credit Rating"; the direction is in the attachment |
+| Auditor or director resignations | Not registered | A sell signal for a long-only book, and the text rarely gives the reason. Would need an "avoid" rule in the protocol first |
+| Buyback, bonus, split notices | Not registered | Known effects with about 50 to 100 events a year: not confirmable forward (lesson from T-0005) |
+| Promotional press releases | Not registered | T-0003 already showed evening-file good news is sold; no new mechanism |
+
+Both registered signals are known families abroad, untested on India as far as a web search on
+2026-11-14 could tell. A pass would be baseline-grade, not a discovery.
+
+### T-0006  Abnormal investor-meeting notices (meet_abnormal_20)      registered: 2026-11-14   status: registered
+Mechanism      : Institutions meet a company's management before they build a position, and
+                 managements accept more meetings when they have something good to show. A burst
+                 of meetings above the company's own usual rate says informed buyers are doing
+                 their homework. Outsiders can see the meetings only as terse exchange notices.
+Why it survives: Each notice is a one-line filing with no content; the information is in the
+                 count against the company's own history, which nobody is shown. In China the
+                 effect sits in neglected, thinly traded names.
+Novelty        : Known family, borrowed: Zhang, So and Wang (JFQA 2025) find Shenzhen firms with
+                 abnormally frequent investor site visits beat those with abnormally few by 0.7 to
+                 1.0% a month; broker conference and analyst-day studies in the US point the same
+                 way. SEBI's rule that listed companies notify analyst and institutional-investor
+                 meetings (LODR regulation 30) is the Indian equivalent. Not a new idea.
+Data           : Announcement text in the daily bundles, subject "Analysts/Institutional Investor
+                 Meet/Con. Call Updates", known on the evening of the bundle's date. Results board
+                 meetings from the notice files. The subject is in use from 2016; text is missing
+                 from March to November 2022 (F30).
+Design         : Count a stock's notices under that subject, leaving out (a) postings of a
+                 transcript, recording, audio, video or presentation and (b) any notice within 30
+                 days after or 15 days before a results board meeting of that stock that had itself
+                 been notified by then (those are results calls, which every company holds).
+                 Score = notices in the last 20 sessions minus the stock's own rate over the 240
+                 sessions before that, both per 20 covered sessions (a session is covered if the
+                 bundle carried 50 or more announcements). No view if the stock has no such notice
+                 in the base period, or if under 15 of the last 20 or 120 of the base 240 sessions
+                 are covered. Dense signal, primary horizon 20, Protocol v1, no fitted parameter.
+                 Checked before registration, without returns: 16,698 kept notices on universe
+                 members; among notices whose text has detail, 5% of the kept ones mention results
+                 or earnings against 32% of the dropped ones. 100 or more names have a view on
+                 every session only in 2019-2021 and 2024-2025, on 59% of sessions in 2018, 37% in
+                 2023 and almost none before 2018 or in 2022.
+Variants       : level instead of abnormal; results-window notices kept; postings kept; window 10;
+                 window 40; base 120.
+Pass criteria  : Protocol v1, all dense gates.
+Falsified if   : Mean 20-session rank IC has t below 3, or the residual IC after known effects has
+                 t below 2, or the top 20 does not beat the universe after costs.
+Power          : About 1,400 scored sessions, so t = 3 needs an IC near 0.025 to 0.03. A true IC
+                 of 0.015 would give t near 1.5. A fail here means "not shown", not "absent".
+Forward        : Dense and daily, so it fits Phase 3 rules as they are. Live running would need
+                 the announcement parser and 260 sessions of text inside the daily run.
+Expected life  : Unknown. The notices are public and easy to count once someone thinks to.
+Prior          : About 10% to pass every gate: six usable years, a subject line that mixes
+                 results calls with real meetings, and frequent meetings may mean promotion ahead
+                 of a share sale as easily as informed buying.
+Result         : (not run yet)
+
+### T-0007  Results date moved earlier (results_advance_7)      registered: 2026-11-14   status: registered
+Mechanism      : Managers bring good results forward and put bad ones off. In India a company
+                 must give notice of its results board meeting at least five days ahead, so the
+                 date is public before the numbers. A date clearly earlier in the quarter than
+                 last year's is a hint of good numbers that few people check.
+Why it survives: Noticing it means holding last year's calendar for 500 companies and adjusting
+                 for the whole market moving (festival dates, deadline changes). The payoff comes
+                 through the results-day gap, which is risky to hold.
+Novelty        : Known family: Chambers and Penman (1984), Bagnoli, Kross and Watts (2002),
+                 Johnson and So (2018, "Time will tell"). No public test on NSE notices found.
+Data           : Board-meeting notices in the daily bundles, known on the evening of the
+                 bundle's date. Missing from March to November 2022, and thin in late 2023.
+Design         : For each stock and calendar quarter, lag = days from the quarter end to the
+                 results meeting date in the first notice (meetings up to 75 days after quarter
+                 end, notice at most 60 days ahead). Shift = that lag minus the lag of the date in
+                 the last notice for the same quarter a year earlier. Abnormal shift = shift minus
+                 the median shift of universe members whose first notice for the same quarter was
+                 known by that evening (30 or more of them, the stock included). Event = abnormal
+                 shift of -7 days or less, on the evening of the first notice, for a universe
+                 member that traded that day, with the meeting still ahead. Enter at the next
+                 open. Event test, primary horizon 20 sessions, Protocol v1. The holding period
+                 includes the results day: the median gap from notice to meeting is 6 sessions.
+                 Counted before registration, without returns: 2,871 events in the scored window,
+                 190 to 370 a year in 2012-2021, 48 and 59 in 2022 and 2023 (missing notices), 129
+                 and 166 in 2024 and 2025. The peer step was added before any return was seen,
+                 because the market-wide median lag moves by up to 8 days between years.
+Variants       : delay of 7 days or more (expected negative); advance of 14 or more; advance of 4
+                 or more; no peer adjustment. Horizons 1 and 5 are reported.
+Pass criteria  : Protocol v1, event gates: mean 20-session excess with month-clustered t of 3.0 or
+                 more, positive in at least 70% of years with 10 or more events, above one round
+                 trip (0.45%), also when entering a session later.
+Falsified if   : Mean excess at or below the round-trip cost, or t below 3.
+Power          : With about 13% of noise per event and clustering in results months, t = 3 needs
+                 a mean excess near 1%.
+Forward        : About 150 events a year now. Confirming a 1% effect at t = 2.4 would take about
+                 6 years, a 2% effect under 2. Phase 3 has no rule for event signals yet; a pass
+                 would need one written and approved before it could take the slot, and the daily
+                 run would need 14 months of notices instead of 240 days.
+Expected life  : Long in the US literature, where it has been public since the 1980s.
+Prior          : About 15% to pass every gate.
+Result         : (not run yet)
+
 ### Harness validation (2026-11-12, before any trial was scored)
 
 `python -m nsr.research.validate` → `research/results/controls.json`.

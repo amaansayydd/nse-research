@@ -53,6 +53,18 @@ TRIALS = {
                             "any disclosure lag": partial(signals.insider_buys, max_lag_days=None),
                             "after a fall": partial(signals.insider_buys, after="fall"),
                             "after a rise": partial(signals.insider_buys, after="rise")}},
+    "T-0006": {"kind": "dense", "name": "meet_abnormal_20", "primary_h": 20, "fn": signals.investor_meet_abnormal,
+               "variants": {"level, not abnormal": partial(signals.investor_meet_abnormal, abnormal=False),
+                            "results-window notices kept": partial(signals.investor_meet_abnormal, offcycle=False),
+                            "postings kept": partial(signals.investor_meet_abnormal, drop_postings=False),
+                            "window 10": partial(signals.investor_meet_abnormal, window=10),
+                            "window 40": partial(signals.investor_meet_abnormal, window=40),
+                            "base 120": partial(signals.investor_meet_abnormal, base=120)}},
+    "T-0007": {"kind": "event", "name": "results_advance_7", "primary_h": 20, "fn": signals.results_date_shift,
+               "variants": {"delay of 7 days or more": partial(signals.results_date_shift, direction="delay"),
+                            "advance of 14 or more": partial(signals.results_date_shift, min_days=14),
+                            "advance of 4 or more": partial(signals.results_date_shift, min_days=4),
+                            "no peer adjustment": partial(signals.results_date_shift, peers=False)}},
 }
 
 
