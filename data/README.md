@@ -1,7 +1,8 @@
 # Data: sources, timing rules and known flaws
 
-Built 2026-11-12. Research window 2010-01-04 .. 2025-11-11: 3,935 trading days, 6,263,490 price
-rows, 2,946 securities (including the NIFTYBEES benchmark). Numbers below come from `data/clean/build_report.json`; rerun
+Built 2026-11-12, rebuilt 2026-11-14 to add two benchmark funds (every earlier row unchanged).
+Research window 2010-01-04 .. 2025-11-11: 3,935 trading days, 6,264,574 price rows, 2,948 securities
+(including three benchmark funds: NIFTYBEES, MOM30IETF, MOMENTUM50). Numbers below come from `data/clean/build_report.json`; rerun
 `python -m nsr.build` to refresh them.
 
 ## Date regimes
@@ -203,6 +204,14 @@ Each one says what goes wrong and how the build handles it.
   `did`, not `pid`; (d) coverage thins after 2021 as promoter trades moved to system-driven
   disclosure at the depositories: raw rows fall from 58,542 in 2018 to 16,991 in 2024; pledge
   releases by promoters of universe stocks fall to 11 in 2025; (e) nothing before 2016.
+
+- **F33. Benchmark funds are priced at their traded close, not at the value of their holdings**
+  (added 2026-11-14). `MOM30IETF` (from 2022-08-10, earlier ticker ICICIMOM30) and `MOMENTUM50` (from
+  2024-09-30) are kept as benchmark series, numbered after every stock so that adding them changed no
+  other row. `MOM30IETF` traded under 100 times a day until 2024: its daily correlation with its index
+  is 0.89 and the worst one-day gap 8.9%, though yearly returns agree within 1 point. Its 10-for-1
+  unit split of 2022-08-12 is not in the register; a benchmark fund's return is blanked on any
+  session where it moves more than 40% with no recorded action. Use the series from 2022-08-16.
 
 ### Settlement
 

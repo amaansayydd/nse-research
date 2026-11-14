@@ -14,6 +14,15 @@ from .sim import buy_and_hold, performance, simulate
 from .tax import TaxModel, buy_and_hold_after_tax
 
 SIM_HORIZONS = (5, 20)   # 1-session holding is a diagnostic only: it cannot pay delivery costs
+# Benchmarks shown beside the simulated portfolios: (row label, column of panel.bench, a fund that can be held).
+# A fund is bought once and held, and its after-tax figure pays the buy, the sale and the tax on exit.
+# The momentum funds are the hurdle for a momentum-based model: the same idea, held by someone else.
+BENCHMARKS = (
+    ("NIFTYBEES buy and hold (no trading costs)", "NIFTYBEES", True),
+    ("MOM30IETF buy and hold (Nifty 200 Momentum 30 fund)", "MOM30IETF", True),
+    ("MOMENTUM50 buy and hold (Nifty 500 Momentum 50 fund)", "MOMENTUM50", True),
+    ("Nifty 50 price index (not investable)", "NIFTY50_PRICE", False),
+)
 N_NAMES = 20
 CAPITAL = 1_000_000.0
 
@@ -51,11 +60,13 @@ def run_sims(panel: Panel, preds: pd.DataFrame, start: int, end: int) -> pd.Data
     hurdle = universe_hold(panel, start, end, tax)
     rows.append({"portfolio": "universe, equal weight, all 500 (after costs)", "hold": "21d",
                  **{k: hurdle.stats[k] for k in keep}})
-    for name, col in (("NIFTYBEES buy and hold (no trading costs)", "NIFTYBEES"), ("Nifty 50 price index (not investable)", "NIFTY50_PRICE")):
-        r = panel.bench.get(col, pd.Series(dtype=float)).iloc[start + 1: end + 1]
-        if len(r):
+    for name, col, fund in BENCHMARKS:
+        full = panel.bench.get(col, pd.Series(dtype=float))
+        r = full.iloc[start + 1: end + 1]
+        # no row for a series that is missing, or that began inside the window (it would sit in cash until then)
+        if full.iloc[: start + 2].notna().any() and r.notna().any():
             row = {"portfolio": name, "hold": "-", **performance(buy_and_hold(r, CAPITAL), CAPITAL)}
-            if col == "NIFTYBEES":
+            if fund:
                 row["after_tax_total_return"] = round(buy_and_hold_after_tax(r, CAPITAL, CostModel(), tax) / CAPITAL - 1, 4)
             rows.append(row)
     logged = set(preds.model.unique())
@@ -191,11 +202,15 @@ rank IC left after the reference model's ranks are removed.
 Top {N_NAMES} names, Rs {CAPITAL:,.0f} paper capital, trades at the next open with 10 bps slippage a side,
 full delivery charges, no fill at a locked band. Averaged over every possible start day. Pre-tax, except
 `after_tax_total_return`: capital-gains tax paid each financial year (20% short-term, 12.5% long-term above
-Rs 1.25 lakh, 4% cess) and the book sold at the end. NIFTYBEES is bought once, held and sold the same way.
+Rs 1.25 lakh, 4% cess) and the book sold at the end. The funds (NIFTYBEES and the two momentum funds) are
+bought once, held and sold the same way, at a stock's charges, which slightly overstates what a fund costs.
 
 {sim_table(sims)}
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
-model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES.
+model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
+that leans on momentum must also beat `MOM30IETF`: a fund that follows a published momentum rule and is
+taxed only when sold. Fund rows use the fund's own closing price, which can stray from its holdings' value
+on a thin day. Graduation does not test against the momentum funds yet (criteria v1).
 
 """
     path.write_text(text + challenger_section(state, comparison, weights) + observed + decay_section(decay, retire) + graduation)

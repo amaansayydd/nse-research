@@ -31,6 +31,11 @@ NON_EQUITY_SYMBOL = r"-RE\d*$"                       # rights entitlements trade
 FUND_NAME = r"\bETF\b|BEES|MUTUAL FUND|\bMF\b|EXCHANGE TRADED"
 REFERENCE = config.RAW / "reference"
 BENCHMARK_SYMBOLS = ("NIFTYBEES",)  # investable Nifty 50 buy-and-hold; kept out of the universe
+# More benchmark funds (2026-11-14): today's ticker -> earlier tickers of the same fund. They are
+# numbered after every other security, so adding one cannot renumber or reorder a stock.
+#   MOM30IETF   ICICI Prudential Nifty 200 Momentum 30 ETF, the most traded momentum ETF
+#   MOMENTUM50  Motilal Oswal Nifty 500 Momentum 50 ETF, the index closest to the universe
+EXTRA_BENCHMARKS = {"MOM30IETF": ("ICICIMOM30",), "MOMENTUM50": ()}
 
 
 def research_dates(end: date | None = None) -> list[date]:
@@ -139,6 +144,18 @@ def assign_sid(px: pd.DataFrame, changes: pd.DataFrame) -> tuple[pd.Series, dict
     sid = key.map(lambda k: ids[roots[k]]).astype("int32")
     stats["securities"] = len(ids)
     return sid.reindex(px.index), stats
+
+
+def number_securities(px: pd.DataFrame, changes: pd.DataFrame) -> tuple[pd.Series, dict]:
+    """assign_sid for everything except the extra benchmark funds, which take the next ids in the
+    order they are listed. Every other security keeps the id it would have without them."""
+    extra = px.symbol.isin(EXTRA_BENCHMARKS)
+    sid, stats = assign_sid(px[~extra], changes)
+    sid = sid.reindex(px.index)
+    top = int(sid.max()) if sid.notna().any() else 0
+    for k, sym in enumerate(EXTRA_BENCHMARKS, start=1):
+        sid[px.symbol == sym] = top + k
+    return sid.astype("int32"), stats
 
 
 # ---------------------------------------------------------- corporate actions
@@ -344,13 +361,14 @@ def build(end: date | None = None, workers: int = 6, out_dir=None) -> dict:
     dates = [p["date"] for p in parts]
 
     px = _cat(parts, "eq")
+    px["symbol"] = px.symbol.replace({old: new for new, olds in EXTRA_BENCHMARKS.items() for old in olds})
     # funds are printed in series EQ: drop every symbol ever listed in the ETF section,
     # anything named like a fund, and rights-entitlement tickers
     funds = set(px.loc[px.is_etf, "symbol"]) | set(px.loc[px.name.str.upper().str.contains(FUND_NAME, regex=True), "symbol"])
     n_all = len(px)
-    funds -= set(BENCHMARK_SYMBOLS)
+    funds -= set(BENCHMARK_SYMBOLS) | set(EXTRA_BENCHMARKS)
     px = px[~px.symbol.isin(funds) & ~px.symbol.str.contains(NON_EQUITY_SYMBOL, regex=True)].drop(columns="is_etf")
-    px["is_benchmark"] = px.symbol.isin(BENCHMARK_SYMBOLS)
+    px["is_benchmark"] = px.symbol.isin(BENCHMARK_SYMBOLS + tuple(EXTRA_BENCHMARKS))
     dropped_non_equity = n_all - len(px)
     for key, cols in (("bh", ["band_hit"]), ("mto", ["mto_qty", "deliv_qty"]),
                       ("mcap", ["face_value", "shares_out", "mcap"])):
@@ -370,9 +388,11 @@ def build(end: date | None = None, workers: int = 6, out_dir=None) -> dict:
     ca = consolidate_actions(_cat(parts, "bc"), register)
     px = compute_returns(apply_actions(px, ca))
 
-    sid, id_stats = assign_sid(px, changes)
-    px["sid"] = sid
+    px["sid"], id_stats = number_securities(px, changes)
     px = quality_flags(px)
+    # A fund that holds a whole index cannot move 40% in a session. Such a row is a unit split
+    # missing from the register (MOM30IETF, 2022-08-12) or a bad print: its return is blanked.
+    px.loc[px.is_benchmark & px.jump_suspect, ["ret_cc", "ret_on"]] = np.nan
 
     avail = pd.to_datetime(px.date).dt.tz_localize(config.IST) + pd.Timedelta(
         hours=config.ASSUMED_EOD_PUBLISH.hour, minutes=config.ASSUMED_EOD_PUBLISH.minute)

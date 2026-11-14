@@ -74,6 +74,7 @@ goes on the scoreboard: the baselines are known effects and this window was not 
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
 | universe, equal weight, all 500 (after costs) | 21d | 33.14% | 29.41% | 15.69% | 19.95% | -25.29% | 0.6 | 0.56% | 0.3 | 1128.0 |  |  |
 | NIFTYBEES buy and hold (no trading costs) | - | 35.16% | 31.72% | 16.58% | 11.62% | -15.23% |  |  |  |  |  |  |
+| MOM30IETF buy and hold (Nifty 200 Momentum 30 fund) | - | 33.54% | 30.31% | 15.86% | 19.17% | -31.84% |  |  |  |  |  |  |
 | Nifty 50 price index (not investable) | - | 31.60% |  | 15.00% | 13.10% | -15.77% |  |  |  |  |  |  |
 | random top 20 | 5d | -6.35% | -7.80% | -3.29% | 19.68% | -32.17% | 51.3 | 23.20% | 0.6 | 54.2 | -7.69% | 0.2 |
 | random top 20 | 20d | 21.34% | 16.25% | 10.35% | 19.45% | -26.97% | 14.3 | 6.40% | 0.1 | 26.0 | 20.73% | 0.1 |

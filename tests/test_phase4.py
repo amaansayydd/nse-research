@@ -134,3 +134,24 @@ def test_scoreboard_shows_progress_when_there_is_no_champion_and_the_table_when_
     sims = report.run_sims(panel, preds, 240, 319)
     report.write_scoreboard(out, scores, sims, 60, "now", graduation=text)
     assert "after_tax_total_return" in out.read_text() and "Graduation (Phase 4)" in out.read_text()
+
+
+def test_momentum_fund_rows_appear_only_when_the_fund_covers_the_window():
+    panel, _, _ = make_panel(drift=np.linspace(-0.002, 0.004, 40))
+    panel.bench["NIFTYBEES"] = 0.0004
+    preds = pd.concat([predict.make_predictions(panel, i, NOW, "r", "c") for i in range(240, 300)])
+    label = lambda sims, sym: sims[sims.portfolio.str.startswith(sym)]
+    assert label(report.run_sims(panel, preds, 240, 319), "MOM30IETF").empty        # not in the data: no row, not zeros
+    panel.bench["MOM30IETF"] = 0.001
+    late = pd.Series(0.001, index=panel.dates)
+    late.iloc[:260] = np.nan                                                        # listed inside the window
+    panel.bench["MOMENTUM50"] = late
+    sims = report.run_sims(panel, preds, 240, 319)
+    fund, nifty = label(sims, "MOM30IETF").iloc[0], label(sims, "NIFTYBEES").iloc[0]
+    assert fund.total_return == pytest.approx(1.001 ** 79 - 1, abs=1e-4)
+    assert 0 < fund.after_tax_total_return < fund.total_return                      # costs and tax on exit
+    assert fund.total_return > nifty.total_return and fund.after_tax_total_return > nifty.after_tax_total_return
+    assert label(sims, "MOMENTUM50").empty
+    assert label(report.run_sims(panel, preds, 265, 319), "MOMENTUM50").shape[0] == 1
+    text = report.sim_table(sims)
+    assert "Nifty 200 Momentum 30 fund" in text and "Nifty 50 price index" not in text

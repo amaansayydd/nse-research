@@ -145,6 +145,17 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
 - **Profit cannot be tested for significance in a useful time.** Graduation therefore puts the
   statistics on IC and fixed margins on the after-tax result and drawdown.
 
+## Findings — momentum fund benchmark (2026-11-14)
+
+- **A momentum fund is the hurdle for a momentum model, and on recent data it wins or ties.** Over
+  the last two research years `MOM30IETF` made 30% after tax. The project's momentum top 20 made 14%;
+  the two challengers made 31% and 32% with more volatility. In sample and only two years, but a
+  model that is 0.90 correlated with momentum has to show what it adds over a fund anyone can hold.
+- **Add a benchmark so that nothing else can move.** The new funds are numbered after every stock.
+  The rebuild was then checked row for row (research) and by hash (production) before anything ran.
+- **A fund series needs its own sanity rule.** A unit split missing from the register printed -90%
+  in one day. An index fund cannot do that; such a return is blanked.
+
 ## Family scorecard (sets the prior for the next idea in a family)
 
 | Family | Tried | Passed backtest | In shadow | Survived forward | Note |

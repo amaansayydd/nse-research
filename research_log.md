@@ -899,6 +899,94 @@ that an index fund can deliver more cheaply.
 
 Draft 2 above applies proposal 1: T-0008 runs in the observation tier, takes no slot and does not
 raise the margin for the two running challengers.
+Proposal 3: the scoreboard part is done (next section). The graduation part is a draft that waits
+for the owner.
+
+## Momentum funds on the scoreboard (2026-11-14, project review proposal 3)
+
+Two exchange-traded momentum funds are now benchmark rows on the scoreboard. No model, prediction,
+score or rule changed. Graduation criteria v1 are unchanged.
+
+| Fund | What it holds | Why this one | Traded in 2025 (median a day) |
+|---|---|---|---|
+| `MOM30IETF` (ICICI Prudential) | Nifty 200 Momentum 30 | The most traded momentum fund on NSE. **The hurdle** | Rs 3.2 crore, about 3,100 trades |
+| `MOMENTUM50` (Motilal Oswal) | Nifty 500 Momentum 50 | The index closest to the universe (top 500). Shown for information | Rs 2.3 crore, about 2,000 trades |
+
+Both were chosen on research-window liquidity, before any forward return of either was looked at.
+Six other momentum funds trade less (MOMOMENTUM, HDFCMOMENT, MOMENTUM, MOMENTUM30, GROWWMOM50, MOMIDMTM).
+
+### The fund series
+
+- Return is the fund's own close over its previous close on NSE, so it is net of the fund's costs.
+  Neither fund shows a distribution in the corporate-action data.
+- `MOM30IETF` listed on 2022-08-10 as ICICIMOM30 and was renamed on 2023-12-20; both tickers are one
+  series. Its units were split 10 for 1 on 2022-08-12 and the register has no entry, so that day
+  printed -89.9%. Rule added to the build: a benchmark fund's return is blanked on a session where it
+  moves more than 40% with no recorded action. `NIFTYBEES` has no such session.
+- Against its price index, 2022-08-16 to 2025-11-11 (804 sessions): fund 18.0% a year, index 17.5%.
+  By year: 2023 40.4% against 40.7%, 2024 20.5% against 20.0%, 2025 to November -3.9% against -4.0%.
+  Daily correlation is only 0.89 because the fund traded about 65 to 100 times a day until 2024; the
+  worst one-day gap to the index is 8.9%. From 2024 it trades about 3,000 times a day.
+- `MOMENTUM50` against its index, 248 sessions to 2025-11-11: -9.9% against -9.2% a year, daily
+  correlation 0.98. It listed on 2024-09-30.
+- Fund rows are charged like a stock when bought and sold (0.1% transaction tax a side). The real
+  tax on fund units is 0.001% on the sale only (checked 2026-11-14). This overstates a fund's cost by
+  about 0.2% once, in the models' favour.
+- A fund that listed inside the measured window gets no row: it would sit in cash until it listed.
+
+### Verification (2026-11-14)
+
+| Check | Result |
+|---|---|
+| Research data rebuilt with the two funds | All 6,263,490 earlier price rows identical and in the same order; universe, indices and corporate actions identical. 1,084 fund rows added, numbered after every stock (2947, 2948) |
+| Production panel before and after (hashes and counts only) | 6,851,127 non-fund rows hash the same; universe and corporate actions the same; 1,584 fund rows added; both funds have a return on both forward sessions |
+| Daily dry run on the new code | random 500, rev_5 500, ens_mom_ear 498, mom_12_1 489, ear_drift_60 465; observed signal would flag 0. Identical to the live run of 2026-11-13 |
+| Tests | 156 pass (2 new: fund numbering, fund rows) |
+| Rehearsal replay, 496 sessions | 15 of 15 checks. Its report differs from the previous one by exactly one added row |
+
+### What the rehearsal window shows (in sample, 496 sessions from 2023-11-12 to 2025-11-11, not evidence)
+
+| Portfolio | Before tax | After tax | Volatility | Worst fall |
+|---|---|---|---|---|
+| NIFTYBEES, held | 35.2% | 31.7% | 11.6% | -15.2% |
+| **MOM30IETF, held** | 33.5% | **30.3%** | 19.2% | -31.8% |
+| Universe, equal weight | 33.1% | 29.4% | 20.0% | -25.3% |
+| `mom_12_1` top 20, 20 sessions | 18.4% | 14.3% | 30.3% | -40.1% |
+| `ear_drift_60` top 20, 20 sessions | 40.0% | 30.8% | 22.6% | -28.6% |
+| `ens_mom_ear` top 20, 20 sessions | 41.4% | 31.8% | 25.8% | -29.3% |
+
+Totals over the two years. `MOMENTUM50` listed inside the window and has no row.
+
+- The project's own momentum baseline, as a top-20 book, finished 16 points behind the momentum
+  fund after tax, with more volatility and a deeper fall. A fund holding 30 large names by a
+  published rule did the job better than a top 20 from 500 re-formed every 20 sessions.
+- The two challengers finished within 1.5 points of the fund after tax, with more volatility. That
+  is a tie, and it is on data their backtests had already seen.
+- Two years, one momentum drawdown (2025), in sample. It says nothing about the next two years. It
+  does say the hurdle is real: a model that leans on momentum has to beat the fund, not the universe.
+
+### Weak points
+
+- The fund's close is a traded price, not the value of its holdings. Over months this washes out;
+  on a single day it can be several percent off, so the fund's volatility and worst fall are
+  slightly overstated.
+- One fund is one index rule (30 names from 200, rebalanced twice a year). It is the cheapest way to
+  buy momentum, not the best possible momentum portfolio.
+- The fund series starts in August 2022, so no long backtest against it is possible.
+
+### Draft, not in force: graduation criteria v1.1 (needs the owner's APPROVE)
+
+One change. G5 would read: the paper portfolio after tax must beat **the better of NIFTYBEES and
+MOM30IETF**, each bought, held and liquidated the same way, by at least 3 percentage points a year.
+Everything else stays as in v1.
+
+- Why the same 3 points: the margin covers slippage worse than assumed (v1, "Why these numbers").
+  That risk is the same whichever fund is the alternative.
+- Effect today: none. There is no champion, and no forward return of either fund has been looked at.
+- Effect later: graduation gets harder in any window where momentum beats the Nifty, which is
+  exactly when a momentum-based model would otherwise look good for free.
+- Not proposed: a test against `MOMENTUM50`. One named hurdle is enough, and two funds would let the
+  easier one be picked afterwards.
 
 ### Harness validation (2026-11-12, before any trial was scored)
 

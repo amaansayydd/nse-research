@@ -91,6 +91,22 @@ def test_rename_keeps_one_id_and_reused_symbol_gets_a_new_one():
     assert stats["renames_linked"] == 1
 
 
+def test_extra_benchmark_funds_take_ids_after_every_stock():
+    from nsr.build import EXTRA_BENCHMARKS, number_securities
+    funds = list(EXTRA_BENCHMARKS)
+    stocks = pd.concat([_px("AAA", ["2020-01-01", "2020-01-02"], [100, 102]), _px("NNN", ["2020-01-01", "2020-01-02"], [50, 51]),
+                        _px("ZZZ", ["2020-01-01", "2020-01-02"], [10, 11])], ignore_index=True)
+    none = pd.DataFrame({"name": [], "old": [], "new": [], "eff": pd.to_datetime([])})
+    alone, _ = assign_sid(stocks, none)
+    px = pd.concat([_px(funds[-1], ["2020-01-01", "2020-01-02"], [20, 21]), stocks,
+                    _px(funds[0], ["2020-01-02"], [30])], ignore_index=True)
+    sid, stats = number_securities(px, none)
+    px["sid"] = sid
+    assert px[~px.symbol.isin(funds)].sid.tolist() == alone.tolist()         # funds between A and Z renumber nothing
+    assert stats["securities"] == 3 and str(sid.dtype) == "int32"
+    assert [px[px.symbol == f].sid.unique().tolist() for f in funds] == [[4 + k] for k in range(len(funds))]
+
+
 def test_rename_without_price_continuity_is_not_linked():
     old = _px("OLDCO", ["2020-01-01", "2020-01-02"], [100, 102])
     new = _px("NEWCO", ["2020-01-03", "2020-01-06"], [500, 510])  # prev_close 500, no continuity
