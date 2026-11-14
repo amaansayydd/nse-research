@@ -561,6 +561,11 @@ T-0005 has not been given a shadow slot. Phase 3 rules v1 judge dense rankers; a
 58 events a year needs its own forward test, a new NSE source inside the live run, and the last of
 the three slots, for a signal that would take about 15 years to confirm. That is the owner's call.
 
+**Owner decision, 2026-11-14:** keep the slot free. T-0005 stays a candidate outside the daily run.
+Challengers in shadow remain two (`ear_drift_60`, `ens_mom_ear`), N = 2, one slot open. No
+production change. T-0005 is reopened only as a new trial, for example if a denser disclosure
+source makes it forward-testable.
+
 Next in the queue: (1) reported earnings surprise, once a throttled overnight pull of results XBRL
 files is approved and disk space is freed; (2) a denser source for insider and pledge disclosures
 (the depositories' system-driven disclosures, or BSE); (3) repair the announcement parser (F31)
