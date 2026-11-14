@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-14 20:30 IST. Prediction days logged: 2. Days with a matured score: 0.
+Updated 2026-11-14 22:30 IST. Prediction days logged: 2. Days with a matured score: 0.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -31,7 +31,7 @@ _not enough sessions to simulate yet_
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
 that leans on momentum must also beat `MOM30IETF`: a fund that follows a published momentum rule and is
 taxed only when sold. Fund rows use the fund's own closing price, which can stray from its holdings' value
-on a thin day. Graduation does not test against the momentum funds yet (criteria v1).
+on a thin day. Graduation criterion G5 is tested against the better of NIFTYBEES and `MOM30IETF` (criteria v1.1).
 
 ## Champion and challengers
 
@@ -90,7 +90,8 @@ would take to raise the alarm: weak signals decay quietly.
 ## Graduation (Phase 4)
 
 Graduation is the point at which real capital may be considered. It needs every criterion below on
-the forward record, and then the owner's explicit decision. Criteria were fixed on 2026-11-13.
+the forward record, and then the owner's explicit decision. Criteria v1.1: fixed on 2026-11-13, and G5
+tightened on 2026-11-14 to the better of NIFTYBEES and the momentum fund, before any forward score existed.
 
 There is no champion, so nothing can graduate. Where each challenger stands on the criteria that can already be measured:
 
