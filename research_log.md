@@ -833,6 +833,26 @@ Not recommended: spending a holdout look on it now. The holdout year holds about
 would give t near 1.9 even if the full effect is real. The forward record gives the same answer
 within about a year at no cost in looks.
 
+## Project review (2026-11-14, owner asked how to better the whole project). Proposals, none decided
+
+What three batches have shown: forward time is the scarce resource (2 to 8 years per answer), one
+signal at a time rarely clears t = 3 and costs alone, and the edges found so far are known effects
+that an index fund can deliver more cheaply.
+
+| # | Proposal | Why | Cost |
+|---|---|---|---|
+| 1 | Two tiers in the forward record. An observation tier logs every plausible signal daily with no slot, no decision rights and no effect on N. A decision tier holds at most 3 composite models that compete for the seat | Forward months cannot be bought back. T-0005, T-0008, reversal and delivery could all be accumulating a record now. It also ends the "last slot" problem | A rule change to Phase 3 (owner approval), event logging and scoring in the daily run |
+| 2 | Make the candidate for the seat one adaptive composite: rank-average of all observed components, weights from matured forward ICs under the shrinkage rule already used by `ens_mom_ear`, new components entering at a small prior weight | One test with the most power instead of many weak ones. A component only has to add to the composite, not pay costs alone | Research: a walk-forward backtest of the weighting rule; one new trial |
+| 3 | Add the real hurdle to the scoreboard and to graduation: a momentum index ETF after tax (MOM30IETF, MOMENTUM30, HDFCMOMENT and others are in the bundles already) | Most of what has passed is momentum plus results drift. If an ETF taxed once at exit gives the same, the system has no reason to exist | Small: ETF total-return series and one more benchmark row. Changing graduation criteria needs approval and a new version |
+| 4 | Rebuild the paper book before adding signals: hold bands (buy top 20, sell only below rank 60), four weekly tranches, short-horizon signals used to time trades the book makes anyway | Turnover is where a 20-session book loses to tax and costs. Reversal and the results-notice run-up cannot pay a round trip but cost nothing as timing rules | Research: one trial per rule, all on existing data |
+| 5 | New dense daily data: F&O bhavcopies (open interest, basis, implied volatility for about 200 liquid names), a sector label, bulk and block deals; then the results XBRL pull for fundamentals | Dense daily signals have the power that event counts lack, and the F&O names are where size is tradeable. Fundamentals open value, quality and earnings surprise | Downloads and parsers; disk is 94% full (10 GB free) |
+| 6 | A rule for when old forward data becomes research data | The research window ends 2025-11-11 and never grows. In two years every backtest will be two years stale | A design decision; nothing to build yet |
+| 7 | Operations: a wake schedule for the run times (none is set), a failure alert to the phone, later a second machine | One missed evening is one lost day of record | Minutes for the wake schedule; the owner must set it |
+| 8 | A registration checklist: horizon taken from the mechanism, backtest and forward power worked out first, covered span stated | T-0007's horizon and T-0006's power were both visible before a trial was spent | None |
+
+Effect on the T-0008 draft above: under proposal 1 it would run in the observation tier. It would
+take no slot and would not raise the margin for the two running challengers.
+
 ### Harness validation (2026-11-12, before any trial was scored)
 
 `python -m nsr.research.validate` → `research/results/controls.json`.
