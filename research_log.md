@@ -571,6 +571,12 @@ files is approved and disk space is freed; (2) a denser source for insider and p
 (the depositories' system-driven disclosures, or BSE); (3) repair the announcement parser (F31)
 before any further announcement-text trial.
 
+**2026-11-14, queue item 3 done.** The announcement parser now reads the single-space layout NSE
+has used since 2025-10-13 (data/README F31 has the checks). The announcements table runs to
+2025-11-11 again: 1,139,058 rows, of which the 1,119,583 up to 2025-10-10 are unchanged. No trial
+was run or re-scored. Research code only; the daily run does not read announcements, so nothing was
+deployed. Still open from F30: announcement text is missing from March to November 2022.
+
 ### Harness validation (2026-11-12, before any trial was scored)
 
 `python -m nsr.research.validate` → `research/results/controls.json`.

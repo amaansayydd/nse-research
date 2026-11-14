@@ -16,8 +16,27 @@ from .. import config, parse
 from ..notices import BM as _BM, MAX_TEXT, member as _member, split_records   # one parser for backtest and live
 from .data import TEXT_DIR
 
+# Until 2025-10-10 the company name was padded from the ticker by two or more spaces. Since
+# 2025-10-13 there is one space, so a record start is 'Name TICKER : text' and the ticker must hold
+# a letter (a continuation line such as '... dated 31.12.2024: ...' is not a start). Old files keep
+# the old rule, so every record up to 2025-10-10 is unchanged.
 _AN = re.compile(r"^(.{2,150}?)\s{2,}([A-Z0-9&\-\.\*]{1,12})\s*: (.*)$")
+_AN_NEW = re.compile(r"^(.{2,150}?)\s+((?=[0-9&\-\.\*]*[A-Z])[A-Z0-9&\-\.\*]{1,12})\s*: (.*)$")
 _SKIP = re.compile(r"^\s*Declaration of NAV", re.I)
+
+
+def an_pattern(raw: str) -> re.Pattern:
+    """The rule for this file's layout: padded if at least half of the lines that could start a
+    record are padded (old files: all of them; new files: about 1 in 500)."""
+    lines = raw.splitlines()[1:]
+    padded = sum(1 for line in lines if _AN.match(line))
+    return _AN if 2 * padded >= sum(1 for line in lines if _AN_NEW.match(line)) else _AN_NEW
+
+
+def an_records(raw: str | None, d: date) -> list[tuple]:
+    if not raw:
+        return []
+    return [(d, s, " ".join(t.split())[:MAX_TEXT]) for s, t in split_records(raw, an_pattern(raw)) if not _SKIP.match(t)]
 
 
 def parse_day(d: date) -> tuple[list[tuple], list[tuple]]:
@@ -25,7 +44,7 @@ def parse_day(d: date) -> tuple[list[tuple], list[tuple]]:
     if zf is None:
         return [], []
     an_raw, bm_raw = _member(zf, "an"), _member(zf, "bm")
-    an = [(d, s, " ".join(t.split())[:MAX_TEXT]) for s, t in split_records(an_raw, _AN) if not _SKIP.match(t)] if an_raw else []
+    an = an_records(an_raw, d)
     bm = [(d, s, m, " ".join(t.split())[:MAX_TEXT]) for s, m, t in split_records(bm_raw, _BM)] if bm_raw else []
     return an, bm
 

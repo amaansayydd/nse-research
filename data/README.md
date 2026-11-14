@@ -179,8 +179,17 @@ Each one says what goes wrong and how the build handles it.
   both; on every bundle up to 2025-10-10 it returns exactly the old records). No registered result
   changed: every scored session ends by 2025-10-09, and a notice filed later cannot enter an earlier
   score (checked by recomputing T-0002's scores with the old and new tables). The announcement parser
-  is **not** fixed: the announcements table is incomplete after 2025-10-10 and must be repaired before
-  any new announcement-text trial. In production the notices come from the last 240 days of bundles,
+  was fixed on 2026-11-14 (`nsr.research.text`). An `An` line carries no date to anchor on, so the
+  parser picks the rule per file: a padded file keeps the old two-space rule, a single-space file
+  uses 'Name TICKER : text' where the ticker must hold a letter. Checks: all 1,119,583 rows up to
+  2025-10-10 are identical after the rebuild; 19,475 rows were added for the 20 sessions from
+  2025-10-13 to 2025-11-11 (498 of the 500 universe names have one, against 488 and 495 in the same
+  weeks of 2024 and 2023). Squeezing every old file to the new layout and parsing it with the new
+  rule gives the old record starts back with 215 false starts in 6.97 million (4 of them on a real
+  ticker) and no wrong ticker; the 1,942 it misses are records with a ticker made only of digits,
+  which are mutual-fund NAV lines (dropped anyway) except 7. A false start cuts the true record's
+  text short at that line. No registered result changed: no row up to 2025-10-10 changed and every
+  scored session ends by 2025-10-09. In production the notices come from the last 240 days of bundles,
   holdout window included, and are stored in `~/nse_production/clean/board_meetings.parquet`. The run
   notes flag a window with no notices or more than 30 empty sessions.
 

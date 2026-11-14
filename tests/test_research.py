@@ -137,6 +137,41 @@ def test_announcement_records_join_continuation_lines():
     assert recs[0] == ("ACME", "Updates Acme has won an order worth Rs 5 crore") and recs[1][0] == "BETA"
 
 
+OLD_AN = ("COMPANY NAME    SYMBOL    : ANNOUNCEMENTS\n"
+          "Acme Limited    ACME : Updates Acme has won\n"
+          "Email ID: help@acme.example\n"
+          "Beta Ltd    BETA       : Declaration of NAV x\n"
+          "Gamma Industries Limited    GAMMA : Dividend GAMMA : Gamma has declared\n")
+NEW_AN = ("COMPANY NAME    SYMBOL    : ANNOUNCEMENTS\n"
+          "Acme Limited ACME : Updates ACME : Acme Limited has won\n"
+          "an order as per circular dated 31.12.2024: details enclosed\n"
+          "Beta Mutual Fund - Beta Gold ETF BETAGOLD : Declaration of NAV BETAGOLD   : x\n"
+          "GAMMA INFRA-TECH LIMITED GAMMA : Dividend GAMMA : Gamma has declared\n"
+          "3M India Limited 3MINDIA : Updates has informed the Exchange about  x\n")
+
+
+def test_announcement_layouts_are_told_apart():
+    assert text.an_pattern(OLD_AN) is text._AN and text.an_pattern(NEW_AN) is text._AN_NEW
+    assert text.an_pattern("COMPANY NAME    SYMBOL    : ANNOUNCEMENTS\n") is text._AN
+
+
+def test_old_layout_keeps_the_old_rule():
+    d = pd.Timestamp("2025-10-10").date()
+    want = [(d, s, " ".join(t.split())) for s, t in text.split_records(OLD_AN, text._AN) if s != "BETA"]
+    assert text.an_records(OLD_AN, d) == want
+    assert [r[1] for r in want] == ["ACME", "GAMMA"]              # 'Email ID:' stays a continuation line
+    assert want[0][2] == "Updates Acme has won Email ID: help@acme.example"
+
+
+def test_new_layout_reads_single_space_records():
+    d = pd.Timestamp("2025-10-13").date()
+    recs = text.an_records(NEW_AN, d)
+    assert [r[1] for r in recs] == ["ACME", "GAMMA", "3MINDIA"]   # NAV line skipped, as before
+    assert recs[0][2].endswith("an order as per circular dated 31.12.2024: details enclosed")   # digits are not a ticker
+    assert recs[1][2].startswith("Dividend GAMMA : Gamma")
+    assert text.an_records(None, d) == [] and text.an_records("", d) == []
+
+
 def test_board_meeting_record():
     raw = "COMPANY NAME    SYMBOL     : BM DATE    : BM PURPOSE \nNTPC Limited    NTPC : 24-OCT-2024 : Financial Results/Dividend To consider\n"
     assert text.split_records(raw, text._BM) == [("NTPC", "24-OCT-2024", "Financial Results/Dividend To consider")]

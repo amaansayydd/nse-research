@@ -109,6 +109,10 @@ Backtests on 2012-2025. They guide what to test next; only the forward record co
   on, which cost the last research month and would have left the live challenger permanently silent.
   The backtest could not show it, because its scored window ended four days earlier. It was caught by
   the live count of names ranked. Every parsed source now needs a count check in the run notes.
+- **A changed file layout can be tested against the old one.** When NSE's announcement files lost
+  their padding there was no truth to check the new rule against. Rewriting 15 years of old files
+  into the new layout and comparing with the old parse gave one (2026-11-14): 215 false starts in
+  6.97 million records. Do this before trusting any relaxed parsing rule.
 - **Check the live count against the backtest count.** 444 names ranked live against 439 on average in
   the backtest is the quickest proof that live code and backtest code see the same world.
 
