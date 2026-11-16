@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-16 07:46 IST. Prediction days logged: 2. Days with a matured score: 0.
+Updated 2026-11-16 20:30 IST. Prediction days logged: 3. Days with a matured score: 1.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -11,7 +11,11 @@ Target: return from the next session's open to the open h sessions later. `eff_o
 count by the horizon because overlapping targets are not independent. An `ic_t` below 2 means nothing
 yet. `days needed for t=2` assumes the IC measured so far is the true IC, which early on it is not.
 
-_no matured predictions yet_
+| model | horizon | days | eff_obs | first | last | ic_mean | ic_sd | ic_t | top_excess_mean | top_hit | brier | ic_ex_ref_mean | days needed for t=2 |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| mom_12_1 | 1 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | 0.1384 |  |  | 0.24% | 55.10% | 0.2489 |  |  |
+| random | 1 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | -0.0392 |  |  | 0.06% | 50.00% | 0.2500 | -0.0355 |  |
+| rev_5 | 1 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | 0.1170 |  |  | 0.89% | 62.00% | 0.2495 | 0.1158 |  |
 
 `top_excess_mean`: top-decile mean return minus the universe mean, before costs. `top_hit`: share of
 top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores. `ic_ex_ref_mean`:
@@ -25,7 +29,23 @@ full delivery charges, no fill at a locked band. Averaged over every possible st
 Rs 1.25 lakh, 4% cess) and the book sold at the end. The funds (NIFTYBEES and the two momentum funds) are
 bought once, held and sold the same way, at a stock's charges, which slightly overstates what a fund costs.
 
-_not enough sessions to simulate yet_
+| portfolio | hold | total_return | after_tax_total_return | cagr | vol | max_drawdown | turnover_per_year | cost_drag_per_year | unfilled_buys | blocked_sells | total_return_if_silent_holdings_go_to_zero | writeoffs |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| universe, equal weight, all 500 (after costs) | 21d | -0.12% | -0.22% | -14.48% | 0.76% | -0.10% | 6.0 | 2.62% | 0.0 | 0.0 |  |  |
+| NIFTYBEES buy and hold (no trading costs) | - | -0.21% | -0.63% | -23.43% | 9.95% | 0.00% |  |  |  |  |  |  |
+| MOM30IETF buy and hold (Nifty 200 Momentum 30 fund) | - | 0.06% | -0.36% | 8.45% | 7.93% | -0.32% |  |  |  |  |  |  |
+| MOMENTUM50 buy and hold (Nifty 500 Momentum 50 fund) | - | -1.52% | -1.94% | -85.49% | 33.53% | -2.25% |  |  |  |  |  |  |
+| Nifty 50 price index (not investable) | - | -0.03% |  | -4.03% | 13.43% | 0.00% |  |  |  |  |  |  |
+| random top 20 | 5d | -0.53% | -0.62% | -48.67% | 1.47% | -0.33% | 25.2 | 11.02% | 0.0 | 0.0 | -0.53% | 0.0 |
+| random top 20 | 20d | -0.13% | -0.16% | -15.33% | 0.37% | -0.08% | 6.3 | 2.75% | 0.0 | 0.0 | -0.13% | 0.0 |
+| mom_12_1 top 20 | 5d | -1.04% | -1.13% | -73.07% | 9.10% | -0.92% | 25.2 | 11.02% | 0.0 | 0.0 | -1.04% | 0.0 |
+| mom_12_1 top 20 | 20d | -0.26% | -0.28% | -27.87% | 2.27% | -0.23% | 6.3 | 2.75% | 0.0 | 0.0 | -0.26% | 0.0 |
+| rev_5 top 20 | 5d | -0.41% | -0.51% | -40.56% | 7.07% | -0.52% | 25.2 | 11.02% | 0.0 | 0.0 | -0.41% | 0.0 |
+| rev_5 top 20 | 20d | -0.10% | -0.13% | -12.18% | 1.77% | -0.13% | 6.3 | 2.75% | 0.0 | 0.0 | -0.10% | 0.0 |
+| ear_drift_60 top 20 | 5d | -0.34% | -0.39% | -34.94% | 3.82% | -0.34% | 12.6 | 5.51% | 0.0 | 0.0 | -0.34% | 0.0 |
+| ear_drift_60 top 20 | 20d | -0.09% | -0.10% | -10.18% | 0.96% | -0.09% | 3.1 | 1.38% | 0.0 | 0.0 | -0.09% | 0.0 |
+| ens_mom_ear top 20 | 5d | -0.51% | -0.56% | -47.78% | 5.77% | -0.51% | 12.6 | 5.51% | 0.0 | 0.0 | -0.51% | 0.0 |
+| ens_mom_ear top 20 | 20d | -0.13% | -0.14% | -14.96% | 1.44% | -0.13% | 3.1 | 1.38% | 0.0 | 0.0 | -0.13% | 0.0 |
 
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
@@ -74,10 +94,10 @@ would take to raise the alarm: weak signals decay quietly.
 
 | model | horizon | expected_ic | observations | forward_ic | cusum | alarm_at | state | sessions_to_detect_total_loss | retire_rule_met |
 |---|---|---|---|---|---|---|---|---|---|
-| mom_12_1 | 1 | 0.0062 | 0 |  | 0.00 | 43.57 | ok | 1064 |  |
+| mom_12_1 | 1 | 0.0062 | 1 | 0.1384 | 0.00 | 43.57 | ok | 1064 |  |
 | mom_12_1 | 5 | 0.0158 | 0 |  | 0.00 | 19.51 | ok | 1175 |  |
 | mom_12_1 | 20 | 0.0256 | 0 |  | 0.00 | 10.22 | ok | 1581 |  |
-| rev_5 | 1 | 0.0114 | 0 |  | 0.00 | 33.22 | ok | 506 |  |
+| rev_5 | 1 | 0.0114 | 1 | 0.1170 | 0.00 | 33.22 | ok | 506 |  |
 | rev_5 | 5 | 0.0157 | 0 |  | 0.00 | 17.71 | ok | 898 |  |
 | rev_5 | 20 | 0.0044 | 0 |  | 0.00 | 13.15 | ok | 3420 |  |
 | ear_drift_60 | 1 | 0.0072 | 0 |  | 0.00 | 30.71 | ok | 412 |  |
