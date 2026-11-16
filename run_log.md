@@ -21,3 +21,4 @@ Missed or failed days are logged and skipped. Predictions are never backfilled.
 | 2026-11-15 10:47 | ALREADY_DONE | 2026-11-13 | 0 |  |
 | 2026-11-15 20:30 | ALREADY_DONE | 2026-11-13 | 0 |  |
 | 2026-11-15 22:30 | ALREADY_DONE | 2026-11-13 | 0 |  |
+| 2026-11-16 07:46 | ALREADY_DONE | 2026-11-13 | 0 | pr 2026-11-14: error:ConnectionError; mto 2026-11-14: error:ConnectionError; pr 2026-11-15: error:ConnectionError; mto 2026-11-15: error:ConnectionError; pr 2026-11-16: error:ConnectionError; mto 2026-11-16: error:ConnectionError; symbolchange ConnectionError; register refresh failed (ConnectionError); using previous copy |
