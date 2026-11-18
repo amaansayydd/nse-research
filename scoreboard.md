@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-17 22:30 IST. Prediction days logged: 4. Days with a matured score: 2.
+Updated 2026-11-18 07:46 IST. Prediction days logged: 4. Days with a matured score: 2.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
