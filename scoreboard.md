@@ -1,6 +1,6 @@
 # Scoreboard (forward-only)
 
-Updated 2026-11-20 07:46 IST. Prediction days logged: 6. Days with a matured score: 4.
+Updated 2026-11-20 20:30 IST. Prediction days logged: 7. Days with a matured score: 5.
 
 Only predictions written to `predictions.csv` before their outcome window opened are counted here.
 Backtest and dress-rehearsal numbers never appear in this file.
@@ -13,11 +13,14 @@ yet. `days needed for t=2` assumes the IC measured so far is the true IC, which 
 
 | model | horizon | days | eff_obs | first | last | ic_mean | ic_sd | ic_t | top_excess_mean | top_hit | brier | ic_ex_ref_mean | days needed for t=2 |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| ear_drift_60 | 1 | 3 | 3.0 | 2026-11-13 | 2026-11-17 | 0.0729 | 0.0656 | 1.93 | 0.00% | 49.91% | 0.2495 | 0.0772 | 3 |
-| ens_mom_ear | 1 | 3 | 3.0 | 2026-11-13 | 2026-11-17 | 0.0347 | 0.0538 | 1.12 | -0.03% | 49.33% | 0.2497 | 0.0754 | 10 |
-| mom_12_1 | 1 | 4 | 4.0 | 2026-11-12 | 2026-11-17 | 0.0197 | 0.1138 | 0.35 | -0.29% | 44.39% | 0.2499 |  | 134 |
-| random | 1 | 4 | 4.0 | 2026-11-12 | 2026-11-17 | -0.0067 | 0.0425 | -0.31 | 0.06% | 51.00% | 0.2500 | -0.0090 | 162 |
-| rev_5 | 1 | 4 | 4.0 | 2026-11-12 | 2026-11-17 | 0.0321 | 0.1524 | 0.42 | 0.11% | 53.00% | 0.2499 | 0.0285 | 90 |
+| ear_drift_60 | 1 | 4 | 4.0 | 2026-11-13 | 2026-11-18 | 0.0408 | 0.0837 | 0.97 | -0.10% | 47.93% | 0.2497 | 0.0461 | 17 |
+| ens_mom_ear | 1 | 4 | 4.0 | 2026-11-13 | 2026-11-18 | -0.0051 | 0.0909 | -0.11 | -0.30% | 46.00% | 0.2500 | 0.0461 | 1280 |
+| mom_12_1 | 1 | 5 | 5.0 | 2026-11-12 | 2026-11-18 | -0.0116 | 0.1208 | -0.22 | -0.41% | 41.22% | 0.2501 |  | 433 |
+| mom_12_1 | 5 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | -0.0209 |  |  | -1.48% | 44.90% | 0.2501 |  |  |
+| random | 1 | 5 | 5.0 | 2026-11-12 | 2026-11-18 | -0.0087 | 0.0371 | -0.52 | -0.03% | 50.80% | 0.2500 | -0.0069 | 73 |
+| random | 5 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | 0.0262 |  |  | -0.38% | 48.00% | 0.2500 | 0.0322 |  |
+| rev_5 | 1 | 5 | 5.0 | 2026-11-12 | 2026-11-18 | 0.0337 | 0.1320 | 0.57 | 0.03% | 51.60% | 0.2499 | 0.0280 | 61 |
+| rev_5 | 5 | 1 | 1.0 | 2026-11-12 | 2026-11-12 | 0.0093 |  |  | -0.18% | 38.00% | 0.2503 | 0.0046 |  |
 
 `top_excess_mean`: top-decile mean return minus the universe mean, before costs. `top_hit`: share of
 top-decile names beating the universe median. `brier`: 0.25 is what a coin flip scores. `ic_ex_ref_mean`:
@@ -33,21 +36,21 @@ bought once, held and sold the same way, at a stock's charges, which slightly ov
 
 | portfolio | hold | total_return | after_tax_total_return | cagr | vol | max_drawdown | turnover_per_year | cost_drag_per_year | unfilled_buys | blocked_sells | total_return_if_silent_holdings_go_to_zero | writeoffs |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|
-| universe, equal weight, all 500 (after costs) | 21d | -0.07% | -0.31% | -3.56% | 2.49% | -0.28% | 6.0 | 2.62% | 0.0 | 0.0 |  |  |
-| NIFTYBEES buy and hold (no trading costs) | - | 0.83% | 0.32% | 51.62% | 11.21% | -0.59% |  |  |  |  |  |  |
-| MOM30IETF buy and hold (Nifty 200 Momentum 30 fund) | - | -1.38% | -1.80% | -50.46% | 15.36% | -2.60% |  |  |  |  |  |  |
-| MOMENTUM50 buy and hold (Nifty 500 Momentum 50 fund) | - | -1.21% | -1.62% | -45.73% | 21.57% | -2.71% |  |  |  |  |  |  |
-| Nifty 50 price index (not investable) | - | 0.85% |  | 53.17% | 12.29% | -0.63% |  |  |  |  |  |  |
-| random top 20 | 5d | -0.67% | -0.91% | -28.62% | 8.87% | -1.25% | 25.2 | 11.02% | 0.0 | 0.0 | -0.67% | 0.0 |
-| random top 20 | 20d | -0.17% | -0.23% | -8.06% | 2.20% | -0.31% | 6.3 | 2.75% | 0.0 | 0.0 | -0.17% | 0.0 |
-| mom_12_1 top 20 | 5d | -1.02% | -1.27% | -40.48% | 10.20% | -1.62% | 25.2 | 11.02% | 0.0 | 0.0 | -1.02% | 0.0 |
-| mom_12_1 top 20 | 20d | -0.26% | -0.32% | -12.12% | 2.53% | -0.40% | 6.3 | 2.75% | 0.0 | 0.0 | -0.26% | 0.0 |
-| rev_5 top 20 | 5d | -1.13% | -1.39% | -43.48% | 9.44% | -1.81% | 25.2 | 11.02% | 0.0 | 0.0 | -1.13% | 0.0 |
-| rev_5 top 20 | 20d | -0.28% | -0.35% | -13.24% | 2.34% | -0.45% | 6.3 | 2.75% | 0.0 | 0.0 | -0.28% | 0.0 |
-| ear_drift_60 top 20 | 5d | -0.32% | -0.52% | -14.96% | 5.63% | -0.76% | 20.2 | 8.81% | 0.0 | 0.0 | -0.32% | 0.0 |
-| ear_drift_60 top 20 | 20d | -0.08% | -0.13% | -3.97% | 1.40% | -0.19% | 5.0 | 2.20% | 0.0 | 0.0 | -0.08% | 0.0 |
-| ens_mom_ear top 20 | 5d | -0.63% | -0.82% | -27.25% | 5.11% | -0.74% | 20.2 | 8.81% | 0.0 | 0.0 | -0.63% | 0.0 |
-| ens_mom_ear top 20 | 20d | -0.16% | -0.20% | -7.63% | 1.28% | -0.18% | 5.0 | 2.20% | 0.0 | 0.0 | -0.16% | 0.0 |
+| universe, equal weight, all 500 (after costs) | 21d | -0.07% | -0.36% | -3.08% | 2.23% | -0.28% | 6.0 | 2.62% | 0.0 | 0.0 |  |  |
+| NIFTYBEES buy and hold (no trading costs) | - | 2.08% | 1.31% | 137.59% | 12.21% | -0.59% |  |  |  |  |  |  |
+| MOM30IETF buy and hold (Nifty 200 Momentum 30 fund) | - | -1.77% | -2.19% | -52.77% | 13.76% | -2.60% |  |  |  |  |  |  |
+| MOMENTUM50 buy and hold (Nifty 500 Momentum 50 fund) | - | -1.61% | -2.03% | -49.49% | 19.33% | -2.71% |  |  |  |  |  |  |
+| Nifty 50 price index (not investable) | - | 1.98% |  | 127.96% | 12.60% | -0.63% |  |  |  |  |  |  |
+| random top 20 | 5d | -0.66% | -0.95% | -24.41% | 7.98% | -1.25% | 28.7 | 12.69% | 0.0 | 0.0 | -0.66% | 0.0 |
+| random top 20 | 20d | -0.09% | -0.17% | -3.66% | 2.10% | -0.31% | 6.3 | 2.75% | 0.0 | 0.0 | -0.09% | 0.0 |
+| mom_12_1 top 20 | 5d | -2.45% | -2.68% | -64.71% | 12.14% | -2.34% | 21.8 | 9.56% | 0.0 | 0.0 | -2.45% | 0.0 |
+| mom_12_1 top 20 | 20d | -0.65% | -0.72% | -23.89% | 3.17% | -0.62% | 6.3 | 2.75% | 0.0 | 0.0 | -0.65% | 0.0 |
+| rev_5 top 20 | 5d | -1.90% | -2.14% | -55.41% | 9.20% | -2.01% | 29.2 | 12.90% | 0.0 | 0.0 | -1.90% | 0.0 |
+| rev_5 top 20 | 20d | -0.46% | -0.53% | -17.49% | 2.23% | -0.48% | 6.3 | 2.75% | 0.0 | 0.0 | -0.46% | 0.0 |
+| ear_drift_60 top 20 | 5d | -0.28% | -0.53% | -11.21% | 5.08% | -0.76% | 21.0 | 9.18% | 0.0 | 0.0 | -0.28% | 0.0 |
+| ear_drift_60 top 20 | 20d | -0.07% | -0.13% | -2.92% | 1.26% | -0.19% | 5.2 | 2.30% | 0.0 | 0.0 | -0.07% | 0.0 |
+| ens_mom_ear top 20 | 5d | -1.86% | -2.09% | -54.53% | 8.53% | -1.86% | 21.0 | 9.18% | 0.0 | 0.0 | -1.86% | 0.0 |
+| ens_mom_ear top 20 | 20d | -0.46% | -0.52% | -17.77% | 2.12% | -0.46% | 5.2 | 2.30% | 0.0 | 0.0 | -0.46% | 0.0 |
 
 `random` is the control: any model that cannot beat it has shown nothing. The hurdle for a stock-picking
 model is the first row (own the whole universe); the hurdle for bothering at all is NIFTYBEES. A model
@@ -96,16 +99,16 @@ would take to raise the alarm: weak signals decay quietly.
 
 | model | horizon | expected_ic | observations | forward_ic | cusum | alarm_at | state | sessions_to_detect_total_loss | retire_rule_met |
 |---|---|---|---|---|---|---|---|---|---|
-| mom_12_1 | 1 | 0.0062 | 4 | 0.0197 | 0.57 | 43.57 | ok | 1064 |  |
-| mom_12_1 | 5 | 0.0158 | 0 |  | 0.00 | 19.51 | ok | 1175 |  |
+| mom_12_1 | 1 | 0.0062 | 5 | -0.0116 | 1.72 | 43.57 | ok | 1064 |  |
+| mom_12_1 | 5 | 0.0158 | 1 | -0.0209 | 0.19 | 19.51 | ok | 1175 |  |
 | mom_12_1 | 20 | 0.0256 | 0 |  | 0.00 | 10.22 | ok | 1581 |  |
-| rev_5 | 1 | 0.0114 | 4 | 0.0321 | 1.72 | 33.22 | ok | 506 |  |
-| rev_5 | 5 | 0.0157 | 0 |  | 0.00 | 17.71 | ok | 898 |  |
+| rev_5 | 1 | 0.0114 | 5 | 0.0337 | 1.43 | 33.22 | ok | 506 |  |
+| rev_5 | 5 | 0.0157 | 1 | 0.0093 | 0.00 | 17.71 | ok | 898 |  |
 | rev_5 | 20 | 0.0044 | 0 |  | 0.00 | 13.15 | ok | 3420 |  |
-| ear_drift_60 | 1 | 0.0072 | 3 | 0.0729 | 0.00 | 30.71 | ok | 412 |  |
+| ear_drift_60 | 1 | 0.0072 | 4 | 0.0408 | 0.92 | 30.71 | ok | 412 |  |
 | ear_drift_60 | 5 | 0.0135 | 0 |  | 0.00 | 15.25 | ok | 605 |  |
 | ear_drift_60 | 20 | 0.0205 | 0 |  | 0.00 | 8.25 | ok | 891 |  |
-| ens_mom_ear | 1 | 0.0077 | 3 | 0.0347 | 0.00 | 38.71 | ok | 763 |  |
+| ens_mom_ear | 1 | 0.0077 | 4 | -0.0051 | 1.15 | 38.71 | ok | 763 |  |
 | ens_mom_ear | 5 | 0.0179 | 0 |  | 0.00 | 18.07 | ok | 949 |  |
 | ens_mom_ear | 20 | 0.0285 | 0 |  | 0.00 | 9.65 | ok | 1347 |  |
 
