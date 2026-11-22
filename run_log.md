@@ -39,3 +39,4 @@ Missed or failed days are logged and skipped. Predictions are never backfilled.
 | 2026-11-21 10:52 | ALREADY_DONE | 2026-11-20 | 0 |  |
 | 2026-11-21 20:30 | ALREADY_DONE | 2026-11-20 | 0 |  |
 | 2026-11-21 22:30 | ALREADY_DONE | 2026-11-20 | 0 |  |
+| 2026-11-22 07:45 | ALREADY_DONE | 2026-11-20 | 0 | pr 2026-11-21: error:ConnectionError; mto 2026-11-21: error:ConnectionError |
