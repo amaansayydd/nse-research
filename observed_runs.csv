@@ -6,3 +6,4 @@ asof_date,model,model_version,flagged,created_at_ist,run_id,code_commit
 2026-11-20,results_advance_5d,v1,0,2026-11-20 20:30:01,20261120T2030,c08cf6f
 2026-11-23,results_advance_5d,v1,0,2026-11-23 20:30:01,20261123T2030,c08cf6f
 2026-11-25,results_advance_5d,v1,0,2026-11-25 20:30:27,20261125T2030,c08cf6f
+2026-11-26,results_advance_5d,v1,0,2026-11-26 20:30:04,20261126T2030,c08cf6f
