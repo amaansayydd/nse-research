@@ -55,3 +55,4 @@ Missed or failed days are logged and skipped. Predictions are never backfilled.
 | 2026-11-26 20:30 | OK | 2026-11-26 | 2487 | register refresh failed (ConnectionError); using previous copy; scored 10 date-model-horizon results |
 | 2026-11-26 22:30 | ALREADY_DONE | 2026-11-26 | 0 |  |
 | 2026-11-27 07:45 | ALREADY_DONE | 2026-11-26 | 0 |  |
+| 2026-11-27 20:30 | OK | 2026-11-27 | 2487 | scored 10 date-model-horizon results |
